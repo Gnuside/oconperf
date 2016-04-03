@@ -8,7 +8,7 @@ clean:
 
 build_native:
 	ocamlbuild -use-ocamlfind $(PROGRAM).native
-	ln -s $(PROGRAM).native $(PROGRAM)
+	ln -sf $(PROGRAM).native $(PROGRAM)
 
 build_byte:
 	ocamlbuild -use-ocamlfind $(PROGRAM).byte
