@@ -15,7 +15,10 @@ let run () =
   connect s4 sa;
   while !connected do
     recv_i := recv s4 buffer 0 buf_size [];
-    print_endline (sprintf "Recv: '%s'" (Bytes.sub_string buffer 0 !recv_i))
+    if !recv_i = 0 then
+      connected := false
+    else
+      print_endline (sprintf "Recv: '%s'" (Bytes.sub_string buffer 0 !recv_i))
   done;
-  print_endline "Client done.";
+  print_endline "Client disconnected.";
   0
