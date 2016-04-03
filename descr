@@ -1,0 +1,12 @@
+oconperf
+
+OCaml connection performance test application
+
+This is an application divided into a server and client part.
+
+This is an intelligent performance test application displaying
+on the client part performance statistics (latency, bandwidth).
+
+The idea is to intellegilently measure both latency and bandwidth to
+unsure good estimation of connections from satelites to ultra-high Gb
+connections.

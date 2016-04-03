@@ -1,0 +1,17 @@
+opam-version: "1.2"
+name: "oconperf"
+version: "0.0.1"
+maintainer: "Roland Laurès <roland.laures@netcat.io>"
+authors: "Roland Laurès <roland.laures@netcat.io>"
+homepage: "http://netcat.io"
+bug-reports: "https://github.com/Gnuside/oconperf/issues"
+license: "GPL V3"
+dev-repo: "https://github.com/Gnuside/oconperf"
+build: [
+  [make all]
+]
+install: [make "install"]
+remove: [make uninstall]
+depends: [
+  "ocamlfind" {build}
+]

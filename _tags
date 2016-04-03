@@ -1,0 +1,10 @@
+<src/lib> or <src>: include
+<**/*.ml> or <**/*.mli> or <**/*.mlpack> or <**/*.ml.depends>: ocaml, package(unix, threads), thread
+<**/*.byte>: ocaml, byte, program, package(unix, threads), thread
+<**/*.odoc>: ocaml, doc
+<**/*.native>: ocaml, native, program, package(unix, threads), thread
+<**/*.cma>: ocaml, byte, library, package(unix, threads), thread
+<**/*.cmxa>: ocaml, native, library, package(unix, threads), thread
+<**/*.cmo>: ocaml, byte
+<**/*.cmi>: ocaml, byte, native
+<**/*.cmx>: ocaml, native
