@@ -27,7 +27,7 @@ let run_connection (fd,remote)  =
   let buffer = Bytes.of_string "Hello"
   in
   print_endline (sprintf "  Connection from: %s" (string_of_sockaddr remote));
-  ignore(send fd buffer 0 5 []);
+  server_run fd;
   shutdown fd SHUTDOWN_ALL;
   ()
 ;;
