@@ -88,6 +88,11 @@ let random_fill bytes =
 ;;
 
 
+(* Tant qu'on est en dessous de la moitié du max time, on fait grossir
+ * la taille des paquets, ensuite on arrete de les faire grossir
+ *
+ * On arrete l'envoi/reception une fois le temps écoulé  *)
+
 let client_run ?(max_time=2.0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
