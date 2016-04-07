@@ -80,8 +80,9 @@ let random_fill bytes =
   and l = ref (min len (Random.int random_buffer_size)) in
   while !i < len do
     let i_r = Random.int !l in
-    Bytes.blit random_buffer i_r bytes !i (len - i_r);
-    i := !i + (len - i_r);
+    let len_r = min (len - !i) (random_buffer_size - i_r) in
+    Bytes.blit random_buffer i_r bytes !i len_r;
+    i := !i + len_r;
     l := min (len - !i) (Random.int random_buffer_size)
   done
 ;;
