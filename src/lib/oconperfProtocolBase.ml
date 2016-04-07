@@ -27,7 +27,7 @@ and err_values = [
 ];;
 
 let is_valid_command_code b = List.exists (fun i -> i = b) cmd_values
-and min_size = 1 + 5 + 8;;
+and min_size = 1 + 4 + 16;;
 
 
 exception Exn_invalid_command of int
@@ -81,16 +81,17 @@ and unforge_err = function
   | Cmd     -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
 (* MD5 digests *)
-and forge_digest buffer =
-  let s = ref "" in
-  Bytes.iter (fun c -> s := sprintf "%s%02x" !s (int_of_char c)) buffer;
-  Digest.from_hex !s
-and unforge_digest d =
-  let f x1 x2 x3 x4 x5 x6 x7 x8 =
-    let a = [| x1 ; x2 ; x3 ; x4 ; x5 ; x6 ; x7 ; x8 |] in
-    Bytes.init 8 (fun i -> char_of_int a.(i))
+and forge_digest b =
+  let buffer = Bytes.create ((Bytes.length b) * 2) in
+  let insert i c =
+    let short_b = Bytes.of_string (sprintf "%02X" (int_of_char c)) in
+    Bytes.blit short_b 0 buffer (i*2) 2
   in
-  Scanf.sscanf (Digest.to_hex d) "%2x%2x%2x%2x%2x%2x%2x%2x" f
+  Bytes.iteri insert b;
+  print_endline buffer;
+  Digest.from_hex buffer
+and unforge_digest d =
+  Bytes.of_string d
 ;;
 
 (* command must be of the form :
@@ -182,7 +183,7 @@ let of_bytes buffer =
     if buf_l - min_size < len then raise (Exn_read_more(buffer, (min_size + len) - buf_l))
     else begin
       let cmd = int_of_char (Bytes.get buffer 0)
-      and digest = forge_digest (Bytes.sub buffer (5 + len) 8)
+      and digest = forge_digest (Bytes.sub buffer (5 + len) 16)
       in (
         forge_cmd cmd len (Bytes.sub buffer 5 len) digest,
         Bytes.sub buffer (min_size + len) (buf_l - (min_size + len))
