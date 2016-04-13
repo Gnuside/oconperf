@@ -4,17 +4,13 @@ open Printf
 open Unix
 
 let start () =
-  let s4 = socket PF_INET SOCK_STREAM 0
-  and s6 = socket PF_INET6 SOCK_STREAM 0
+  let s = socket !socket_domain SOCK_STREAM 0
   in
-    bind s4 (ADDR_INET(inet_addr_of_string !addr4, !port));
-    bind s6 (ADDR_INET(inet_addr_of_string !addr6, !port));
-    listen s4 !mpc;
-    listen s6 !mpc;
-    (s4,s6)
-and close (s4,s6) =
-  Unix.close s4;
-  Unix.close s6
+    bind s (ADDR_INET(inet_addr_of_string !addr, !port)) ;
+    listen s !mpc ;
+    s
+and close (s) =
+  Unix.close s
 ;;
 
 let string_of_sockaddr sa =
@@ -31,11 +27,11 @@ let run_connection (fd,remote)  =
 ;;
 
 let run () =
-  print_endline (sprintf "Server (%s:%d)" !addr4 !port);
+  print_endline (sprintf "Server (%s:%d)" !addr !port);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-  let (s4,s6) = start () in
+  let (s) = start () in
   while true do
     print_endline "waiting connections...";
-    run_connection (accept s4)
+    run_connection (accept s)
   done;
   0

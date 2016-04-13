@@ -8,6 +8,8 @@ and version = "0.0.1"
 and usage = sprintf "\
 %s [client|server]\
 " Sys.argv.(0)
+and addr4 = ref ""
+and addr6 = ref ""
 
 let show_version () =
   print_endline (sprintf "Version: %s" version);
@@ -21,10 +23,10 @@ let args = ref [
 ]
 ;;
 
-let server_args = []
+let server_args = !args
 ;;
 
-let client_args = [
+let client_args = !args @ [
   ("-I", Arg.Set_string(iface), "Set interface name");
   ("-w", Arg.Set_int(max_timeout), "Set maximum timeout");
   ("-e", Arg.Set_string(callback), "Path to script to be executed to send resulting data.");
@@ -42,6 +44,14 @@ let anon_fun arg = match !Arg.current with
 ;;
 
 Arg.parse_dynamic args anon_fun usage;;
+
+(* Select addr4 if addr6 not specified *)
+match !addr4, !addr6 with
+ | "", "" -> addr := "127.0.0.1" ; socket_domain := Unix.PF_INET
+ | _, ""  -> addr := !addr4 ; socket_domain := Unix.PF_INET
+ | "", _  -> addr := !addr6 ; socket_domain := Unix.PF_INET6
+ | _, _   -> failwith "Please specify only one IP address."
+;;
 
 let _ =
   exit

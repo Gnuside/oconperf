@@ -6,13 +6,13 @@ open Unix
 
 let run () =
   let connected = ref true in
-  print_endline (sprintf "Client connects to %s:%d" !addr4 !port);
-  let s4 = socket PF_INET SOCK_STREAM 0
-  and sa = ADDR_INET(inet_addr_of_string !addr4, !port)
+  print_endline (sprintf "Client connects to %s:%d" !addr !port);
+  let s = socket !socket_domain SOCK_STREAM 0
+  and sa = ADDR_INET(inet_addr_of_string !addr, !port)
   in
-  connect s4 sa;
+  connect s sa;
   while !connected do
-    let (speed, latency) = client_run s4 in
+    let (speed, latency) = client_run s in
     print_endline (sprintf "Download: %f ; Latency: %fs" speed latency)
   done;
   print_endline "Client disconnected.";
