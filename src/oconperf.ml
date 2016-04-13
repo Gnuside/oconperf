@@ -17,6 +17,7 @@ let show_version () =
 
 let args = ref [
   ("--version", Arg.Unit(show_version), "Show software version");
+  ("-q", Arg.Set(quiet), "Run in quiet and parseable mode");
   ("-p", Arg.Set_int(port), "Set server port (to connect to ; on to listen to)");
   ("-a4", Arg.Set_string(addr4), "Set server address (to connect to ; on to listen to)");
   ("-a6", Arg.Set_string(addr6), "Set server address (to connect to ; on to listen to)");

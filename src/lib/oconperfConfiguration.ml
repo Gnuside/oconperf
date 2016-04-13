@@ -1,5 +1,6 @@
 
-let port = ref 4217
+let quiet = ref false
+and port = ref 4217
 and socket_domain = ref Unix.PF_INET
 and addr = ref ""
 and mpc = ref 10 (* max pending clients *)
