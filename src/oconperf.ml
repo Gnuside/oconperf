@@ -29,18 +29,17 @@ let server_args = !args
 let client_args = !args @ [
   ("-I", Arg.Set_string(iface), "Set interface name");
   ("-w", Arg.Set_int(max_timeout), "Set maximum timeout");
-  ("-e", Arg.Set_string(callback), "Path to script to be executed to send resulting data.");
 ]
 ;;
 
 let anon_fun arg = match !Arg.current with
-| 1 -> begin
-   match arg with
-    | "server" -> running := Some(Server) ; args := server_args
-    | "client" -> running := Some(Client) ; args := client_args
-    | _ -> failwith (sprintf "Unknown action '%s'" arg)
- end
-| _  -> failwith (sprintf "Argument '%s' ignored." arg)
+ | 1 -> begin
+  match arg with
+   | "server" -> running := Some(Server) ; args := server_args
+   | "client" -> running := Some(Client) ; args := client_args
+   | _ -> failwith (sprintf "Unknown action '%s'" arg)
+  end
+ | _  -> failwith (sprintf "Argument '%s' ignored." arg)
 ;;
 
 Arg.parse_dynamic args anon_fun usage;;
@@ -50,15 +49,15 @@ match !addr4, !addr6 with
  | "", "" -> addr := "127.0.0.1" ; socket_domain := Unix.PF_INET
  | _, ""  -> addr := !addr4 ; socket_domain := Unix.PF_INET
  | "", _  -> addr := !addr6 ; socket_domain := Unix.PF_INET6
- | _, _   -> failwith "Please specify only one IP address."
+ | _, _ -> failwith "Please specify only one IP address."
 ;;
 
 let _ =
   exit
   (Unix.handle_unix_error (
     match !running with
-    | Some(Server) -> OconperfServer.run
-    | Some(Client) -> OconperfClient.run
-    | None -> failwith "Please specify the action argument."
+     | Some(Server) -> OconperfServer.run
+     | Some(Client) -> OconperfClient.run
+     | None -> failwith "Please specify the action argument."
   ) ())
 ;;

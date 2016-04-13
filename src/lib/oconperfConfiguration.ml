@@ -5,4 +5,3 @@ and addr = ref ""
 and mpc = ref 10 (* max pending clients *)
 and iface = ref ""
 and max_timeout = ref 0
-and callback = ref ""
