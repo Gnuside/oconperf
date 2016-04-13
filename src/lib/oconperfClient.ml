@@ -12,7 +12,7 @@ let run () =
   in
   connect s sa;
   while !connected do
-    let (speed, latency) = client_run s in
+    let (speed, latency) = client_run s ~max_time: (float_of_int !max_timeout) in
     print_endline (sprintf "Download: %f ; Latency: %fs" speed latency)
   done;
   print_endline "Client disconnected.";
