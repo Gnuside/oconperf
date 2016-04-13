@@ -1,5 +1,6 @@
 # oconperf
-OCaml connection performance test application
+
+OCaml connection performance test application.
 
 ## Build
 
@@ -10,13 +11,14 @@ make build_byte
 ## Run
 
 ~~~
-./oconperf.byte
+./oconperf.byte client [-I iface] [-a4 IPv4Address] [-a6 IPv6Address] [-p port] [-w deadline] [-e callback_script]
+./oconperf.byte server [-a4 IPv4Address] [-a6 IPv6Address] [-p port]
+./oconperf.byte [--version][--help]
 ~~~
 
 ## Native code
 
 ~~~
 make build_native
-./oconperf.native
+./oconperf
 ~~~
-
