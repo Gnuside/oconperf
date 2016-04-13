@@ -1,14 +1,13 @@
 open OconperfConfiguration
 open OconperfProtocol
+open OconperfPervasives
 open Printf
 open Unix
 
 
 let run () =
   let connected = ref true in
-  if !quiet == false
-  then print_endline (sprintf "Client connects to %s:%d" !addr !port)
-  else ();
+  print_message (sprintf "Client connects to %s:%d" !addr !port);
   let s = socket !socket_domain SOCK_STREAM 0
   and sa = ADDR_INET(inet_addr_of_string !addr, !port)
   in
@@ -21,7 +20,5 @@ let run () =
       else (sprintf "%f\t%f" speed latency)
     );
   done;
-  if !quiet == false
-  then print_endline "Client disconnected."
-  else ();
+  print_message "Client disconnected.";
   0
