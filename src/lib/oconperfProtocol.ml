@@ -1,4 +1,7 @@
 open OconperfProtocolBase
+open OconperfPervasives
+open OconperfList
+open OconperfBytes
 open Printf
 open Unix;;
 (* Client connects, then ask server to send (Send) to the client data
@@ -13,23 +16,13 @@ let rbuf_size = ref (OconperfProtocolBase.min_size)
 and rbuf_i = ref 0;;
 let rbuf = ref (Bytes.create OconperfProtocolBase.min_size);;
 
-let sprintf_bytes b =
-  let buffer = Bytes.create ((Bytes.length b) * 3) in
-  let insert i c =
-    let short_b = Bytes.of_string (sprintf "%02X " (int_of_char c)) in
-    Bytes.blit short_b 0 buffer (i*3) 3
-  in
-  Bytes.iteri insert b;
-  buffer
-;;
-
 let random_buffer_size = 2*1024*1024;;
-let random_buffer = Bytes.init random_buffer_size (fun _ -> char_of_int (Random.int 256))
+let random_buffer = create_random_bytes random_buffer_size
 and send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
-  print_endline (sprintf "send_cmd: %s" (sprintf_bytes cmd_b));
-  if single_write fd cmd_b 0 (Bytes.length cmd_b) <> 0 then
-    true
+  print_endline (sprintf "send_cmd: %s" (bytes_to_hex cmd_b));
+  if single_write fd cmd_b 0 (Bytes.length cmd_b) <> 0
+  then true
   else false
 and recv_cmd fd =
   let min_read = ref OconperfProtocolBase.min_size in
@@ -64,29 +57,6 @@ and recv_cmd fd =
     Answer(Read_failed)
   with Result(c) -> c
 ;;
-
-(* compute average value from array *)
-let average_l l =
-  let len = List.length l
-  and sum = ref 0.0 in
-  List.iter (fun v -> sum := !sum +. v) l;
-  !sum /. (float_of_int len)
-;;
-
-(* fill a bytes buffer with random data *)
-let random_fill bytes =
-  let len = Bytes.length bytes in
-  let i = ref 0
-  and l = ref (min len (Random.int random_buffer_size)) in
-  while !i < len do
-    let i_r = Random.int !l in
-    let len_r = min (len - !i) (random_buffer_size - i_r) in
-    Bytes.blit random_buffer i_r bytes !i len_r;
-    i := !i + len_r;
-    l := min (len - !i) (Random.int random_buffer_size)
-  done
-;;
-
 
 (* Tant qu'on est en dessous de la moitié du max time, on fait grossir
  * la taille des paquets, ensuite on arrete de les faire grossir
@@ -123,7 +93,7 @@ and server_run fd =
       (* send acknowledgement then a Packet command *)
       ignore(send_cmd fd (Answer(Ok)));
       let buf = Bytes.create s in
-      random_fill buf;
+      random_fill buf random_buffer random_buffer_size;
       ignore(send_cmd fd (Packet(buf)))
     end
     | answer -> raise (Unexpected_answer(cmd_to_string answer))
