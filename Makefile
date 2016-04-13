@@ -5,6 +5,7 @@ all: build_native build_byte
 
 clean:
 	ocamlbuild -clean
+	rm -f $(PROGRAM)
 
 build_native:
 	ocamlbuild -use-ocamlfind $(PROGRAM).native
