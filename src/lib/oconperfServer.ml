@@ -39,6 +39,6 @@ let run () =
       if Unix.fork() <> 0 then exit 0;
       run_connection (fd, remote); exit 0
     end
-    | id -> close fd; ignore(waitpid [] id)
+    | id -> shutdown fd SHUTDOWN_ALL; ignore(waitpid [] id)
   done;
   0
