@@ -1,6 +1,6 @@
 
 (* Convert byte reprentation to hex representation *)
-val bytes_to_hex : Bytes.t -> Bytes.t
+val bytes_to_hex : Bytes.t -> bool -> Bytes.t
 
 val random_fill : Bytes.t -> Bytes.t -> int -> unit
 

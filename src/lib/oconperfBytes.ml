@@ -1,10 +1,12 @@
 open Printf
 
-let bytes_to_hex b =
-  let buffer = Bytes.create ((Bytes.length b) * 3) in
+let bytes_to_hex b with_space =
+  let pattern = format_of_string (if with_space then "%02X " else "%02X")
+  and out_char_width = if with_space then 3 else 2 in
+  let buffer = Bytes.create ((Bytes.length b) * out_char_width) in
   let insert i c =
-    let short_b = Bytes.of_string (sprintf "%02X " (int_of_char c)) in
-    Bytes.blit short_b 0 buffer (i*3) 3
+    let short_b = Bytes.of_string (sprintf pattern (int_of_char c)) in
+    Bytes.blit short_b 0 buffer (i*out_char_width) out_char_width
   in
   Bytes.iteri insert b;
   buffer

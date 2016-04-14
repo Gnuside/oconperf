@@ -20,7 +20,7 @@ let random_buffer_size = 2*1024*1024;;
 let random_buffer = create_random_bytes random_buffer_size
 and send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
-  print_endline (sprintf "send_cmd: %s" (bytes_to_hex cmd_b));
+  print_endline (sprintf "send_cmd: %s" (bytes_to_hex cmd_b true));
   if single_write fd cmd_b 0 (Bytes.length cmd_b) <> 0
   then true
   else false

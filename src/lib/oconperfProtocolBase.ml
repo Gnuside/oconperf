@@ -1,3 +1,4 @@
+open OconperfBytes
 open Printf
 (* Client connects, then ask server to send (Send) to the client data
  * or to receive (Receive) data from the client *)
@@ -82,12 +83,7 @@ and unforge_err = function
   | Read_failed -> Bytes.make 1 '\x03'
 (* MD5 digests *)
 and forge_digest b =
-  let buffer = Bytes.create ((Bytes.length b) * 2) in
-  let insert i c =
-    let short_b = Bytes.of_string (sprintf "%02X" (int_of_char c)) in
-    Bytes.blit short_b 0 buffer (i*2) 2
-  in
-  Bytes.iteri insert b;
+  let buffer = bytes_to_hex b false in
   print_endline buffer;
   Digest.from_hex buffer
 and unforge_digest d =
