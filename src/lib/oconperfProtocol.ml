@@ -11,6 +11,8 @@ Random.self_init ();
 
 exception Result of cmd_t;;
 exception Unexpected_answer of string;;
+exception Unexpected_request of string;;
+exception Invalid_request of string;;
 
 let rbuf_size = ref (OconperfProtocolBase.min_size)
 and rbuf_i = ref 0;;
@@ -96,6 +98,16 @@ and server_run fd =
       random_fill buf random_buffer random_buffer_size;
       ignore(send_cmd fd (Packet(buf)))
     end
-    | answer -> raise (Unexpected_answer(cmd_to_string answer))
+    | Receive(s) -> begin
+      ignore(send_cmd fd (Answer(Ok)));
+      match recv_cmd fd with
+      | Packet(b) -> begin
+        if s == (Bytes.length b)
+        then ignore(send_cmd fd (Answer(Ok)))
+        else raise (Unexpected_request("Size inconsistancy between Receive and Packet commands."))
+      end
+      | answer -> raise (Unexpected_request(cmd_to_string answer))
+    end
+    | answer -> raise (Unexpected_request(cmd_to_string answer))
   done
 ;;
