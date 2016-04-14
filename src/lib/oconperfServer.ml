@@ -41,4 +41,5 @@ let run () =
     end
     | id -> shutdown fd SHUTDOWN_ALL; ignore(waitpid [] id)
   done;
+  close s;
   0
