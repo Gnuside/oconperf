@@ -29,9 +29,16 @@ let run_connection (fd,remote)  =
 let run () =
   print_endline (sprintf "Server (%s:%d)" !addr !port);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-  let (s) = start () in
+  let s = start () in
   while true do
     print_endline "waiting connections...";
-    run_connection (accept s)
+    let (fd, remote) = accept s
+    in
+    match fork() with
+    | 0  -> begin
+      if Unix.fork() <> 0 then exit 0;
+      run_connection (fd, remote); exit 0
+    end
+    | id -> close fd; ignore(waitpid [] id)
   done;
   0
