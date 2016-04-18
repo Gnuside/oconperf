@@ -16,11 +16,11 @@ let show_version () =
   exit 0
 
 let args = ref [
-  ("--version", Arg.Unit(show_version), "Show software version");
-  ("-q", Arg.Set(quiet), "Run in quiet and parseable mode");
-  ("-p", Arg.Set_int(port), "Set server port (to connect to ; on to listen to)");
-  ("-a4", Arg.Set_string(addr4), "Set server address (to connect to ; on to listen to)");
-  ("-a6", Arg.Set_string(addr6), "Set server address (to connect to ; on to listen to)");
+  ("--version", Arg.Unit(show_version), "\tShow software version");
+  ("-q", Arg.Set(quiet), "\tRun in quiet and parseable mode");
+  ("-p", Arg.Set_int(port), "\tSet server port (to connect to ; on to listen to)");
+  ("-a4", Arg.Set_string(addr4), "\tSet server address (to connect to ; on to listen to)");
+  ("-a6", Arg.Set_string(addr6), "\tSet server address (to connect to ; on to listen to)");
 ]
 ;;
 
@@ -28,8 +28,8 @@ let server_args = !args
 ;;
 
 let client_args = !args @ [
-  ("-I", Arg.Set_string(iface), "Set interface name");
-  ("-w", Arg.Set_int(max_timeout), "Set maximum timeout");
+  ("-I", Arg.Set_string(iface), "\tSet interface name");
+  ("-w", Arg.Set_int(max_timeout), "\tSet maximum timeout");
 ]
 ;;
 
@@ -59,6 +59,9 @@ let _ =
     match !running with
      | Some(Server) -> OconperfServer.run
      | Some(Client) -> OconperfClient.run
-     | None -> failwith "Please specify the action argument."
+     | None -> (
+         Arg.usage !args usage ; 
+         failwith "Please specify the action argument."
+       )
   ) ())
 ;;
