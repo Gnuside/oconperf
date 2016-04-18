@@ -173,7 +173,7 @@ and unforge_cmd = function
 (* returns a forged command + the unused bytes of the buffer *)
 let of_bytes buffer =
   let buf_l = Bytes.length buffer in
-  if buf_l < min_size then raise (Exn_read_more(buffer,min_size - buf_l))
+  if buf_l < min_size then raise (Exn_read_more(buffer, min_size - buf_l))
   else begin
     let len = forge_uint32 (Bytes.sub buffer 1 4)
     in

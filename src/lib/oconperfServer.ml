@@ -21,10 +21,16 @@ let string_of_sockaddr sa =
   | ADDR_UNIX(path) -> sprintf "Unix://%s" path
 ;;
 
-let run_connection (fd,remote)  =
+let client_disconnection (fd, remote) =
+  print_endline (sprintf "  Client %s leaving..." (string_of_sockaddr remote));
+  shutdown fd;
+  ()
+;;
+
+let client_connection (fd, remote)  =
   print_endline (sprintf "  Connection from: %s" (string_of_sockaddr remote));
   server_run fd;
-  shutdown fd;
+  client_disconnection (fd, remote);
   ()
 ;;
 
@@ -44,11 +50,8 @@ let run () =
     let (fd, remote) = accept s
     in
     match fork() with
-    | 0  -> begin
-      if Unix.fork() <> 0 then exit 0;
-      run_connection (fd, remote); exit 0
-    end
-    | id -> shutdown fd; ignore(waitpid [] id)
+    | 0  -> client_connection (fd, remote); exit 0
+    | id -> close fd
   done;
   close s;
   0
