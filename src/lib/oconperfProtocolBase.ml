@@ -1,4 +1,5 @@
 open OconperfBytes
+open OconperfPervasives
 open Printf
 (* Client connects, then ask server to send (Send) to the client data
  * or to receive (Receive) data from the client *)
@@ -84,7 +85,7 @@ and unforge_err = function
 (* MD5 digests *)
 and forge_digest b =
   let buffer = bytes_to_hex b false in
-  print_endline buffer;
+  print_debug buffer;
   Digest.from_hex buffer
 and unforge_digest d =
   Bytes.of_string d

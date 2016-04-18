@@ -22,7 +22,7 @@ let random_buffer_size = 2*1024*1024;;
 let random_buffer = create_random_bytes random_buffer_size
 and send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
-  print_endline (sprintf "send_cmd: %s" (bytes_to_hex cmd_b true));
+  print_debug (sprintf "send_cmd: %s" (bytes_to_hex cmd_b true));
   if single_write fd cmd_b 0 (Bytes.length cmd_b) <> 0
   then true
   else false
@@ -36,16 +36,16 @@ and recv_cmd fd =
           Bytes.blit !rbuf 0 n_buf 0 !rbuf_i;
         rbuf := n_buf
         end;
-        print_endline (sprintf "recv_cmd: before rbuf_i:%d ; min_read:  %d" !rbuf_i !min_read);
+        print_debug (sprintf "recv_cmd: before rbuf_i:%d ; min_read:  %d" !rbuf_i !min_read);
         let r = read fd !rbuf !rbuf_i !min_read in
-        print_endline (sprintf "recv_cmd: after rbuf_i:%d ; min_read: %d ; r: %d" !rbuf_i !min_read r);
+        print_debug (sprintf "recv_cmd: after rbuf_i:%d ; min_read: %d ; r: %d" !rbuf_i !min_read r);
         if r >= !min_read then begin
           rbuf_i := !rbuf_i + r;
           let (cmd, buf) = of_bytes (Bytes.sub !rbuf 0 !rbuf_i) in
           rbuf := buf;
           rbuf_i := 0;
           rbuf_size := Bytes.length !rbuf;
-          print_endline (sprintf "recv_cmd: Result(%s) rbuf_i:%d ;min_read:  %d" (cmd_to_string cmd) !rbuf_i !min_read);
+          print_debug (sprintf "recv_cmd: Result(%s) rbuf_i:%d ;min_read:  %d" (cmd_to_string cmd) !rbuf_i !min_read);
           raise (Result(cmd))
         end else begin
           rbuf_i := !rbuf_i + r;
@@ -53,7 +53,7 @@ and recv_cmd fd =
         end
       end with Exn_read_more(_, mr) -> begin
         min_read := mr;
-        print_endline (sprintf "recv_cmd: Exn rbuf_i:%d ;min_read:  %d" !rbuf_i !min_read)
+        print_debug (sprintf "recv_cmd: Exn rbuf_i:%d ;min_read:  %d" !rbuf_i !min_read)
       end
     done;
     Answer(Read_failed)
@@ -78,7 +78,7 @@ let client_run ?(max_time=2.0) fd =
         match recv_cmd fd with
         | Packet(s) -> begin
           let now = gettimeofday () in
-          print_endline (
+          print_message (
             Printf.sprintf "I received %d data !" (Bytes.length s));
           if (now -. start_time) *. 2. < max_time then
             size := !size * 2

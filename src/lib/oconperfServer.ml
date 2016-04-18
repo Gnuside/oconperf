@@ -9,8 +9,10 @@ let start () =
     bind s (ADDR_INET(inet_addr_of_string !addr, !port)) ;
     listen s !mpc ;
     s
-and close (s) =
+and close s =
   Unix.close s
+and shutdown fd =
+  Unix.shutdown fd SHUTDOWN_ALL
 ;;
 
 let string_of_sockaddr sa =
@@ -22,14 +24,21 @@ let string_of_sockaddr sa =
 let run_connection (fd,remote)  =
   print_endline (sprintf "  Connection from: %s" (string_of_sockaddr remote));
   server_run fd;
-  shutdown fd SHUTDOWN_ALL;
+  shutdown fd;
   ()
+;;
+
+let sigint_handle socket =
+  print_endline "Closing server...";
+  close socket;
+  exit 1
 ;;
 
 let run () =
   print_endline (sprintf "Server (%s:%d)" !addr !port);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   let s = start () in
+  Sys.set_signal Sys.sigint (Sys.Signal_handle (fun n -> sigint_handle s));
   while true do
     print_endline "waiting connections...";
     let (fd, remote) = accept s
@@ -39,7 +48,7 @@ let run () =
       if Unix.fork() <> 0 then exit 0;
       run_connection (fd, remote); exit 0
     end
-    | id -> shutdown fd SHUTDOWN_ALL; ignore(waitpid [] id)
+    | id -> shutdown fd; ignore(waitpid [] id)
   done;
   close s;
   0

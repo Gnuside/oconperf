@@ -5,5 +5,10 @@ let print_message message =
   then print_endline message
   else ()
 
+let print_debug message =
+  if !debug == true
+  then print_endline message
+  else ()
+
 let print_error message =
   prerr_endline message

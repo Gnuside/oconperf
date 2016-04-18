@@ -18,6 +18,7 @@ let show_version () =
 let args = ref [
   ("--version", Arg.Unit(show_version), "\tShow software version");
   ("-q", Arg.Set(quiet), "\tRun in quiet and parseable mode");
+  ("--debug", Arg.Set(debug), "\tRun in debug mode");
   ("-p", Arg.Set_int(port), "\tSet server port (to connect to ; on to listen to)");
   ("-a4", Arg.Set_string(addr4), "\tSet server address (to connect to ; on to listen to)");
   ("-a6", Arg.Set_string(addr6), "\tSet server address (to connect to ; on to listen to)");
@@ -60,7 +61,7 @@ let _ =
      | Some(Server) -> OconperfServer.run
      | Some(Client) -> OconperfClient.run
      | None -> (
-         Arg.usage !args usage ; 
+         Arg.usage !args usage ;
          failwith "Please specify the action argument."
        )
   ) ())
