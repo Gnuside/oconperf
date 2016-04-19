@@ -25,7 +25,7 @@ let rec write_cmd fd cmd_b len =
   try begin
     write fd cmd_b 0 len
   end with Unix_error(e, _, _) -> begin
-    print_message (sprintf "Write error (%s), retrying..." (error_message e));
+    print_error (sprintf "Write error (%s), retrying..." (error_message e));
     Unix.sleep 1;
     write_cmd fd cmd_b len
   end
@@ -66,7 +66,7 @@ and recv_cmd fd =
           min_read := !min_read - r;
           print_debug (sprintf "recv_cmd: after r: %d ; rbuf_i: %d ; min_read: %d" r !rbuf_i !min_read)
         end else if r < 0 then begin
-          print_debug (sprintf "error read %d" r)
+          print_error (sprintf "error read %d" r)
         end else begin
           Unix.sleep 1
         end
@@ -80,18 +80,18 @@ and recv_cmd fd =
 ;;
 
 let client_download fd size =
-  print_message (Printf.sprintf "Server, please send %d bytes" size);
+  print_debug (Printf.sprintf "Server, please send %d bytes" size);
   let t0 = gettimeofday () in
   if send_cmd fd (Send size) then
     match recv_cmd fd with
     | Answer(Ok) -> begin
       let t1 = gettimeofday () in
-      print_message "Okay boy";
+      print_debug "Server say OK";
       (* Then we continue *)
       match recv_cmd fd with
       | Packet(s) -> begin
         let t2 = gettimeofday () in
-        print_message (Printf.sprintf "I received %d data !" (Bytes.length s));
+        print_message (Printf.sprintf "I received %d data" (Bytes.length s));
         ((float_of_int size) /. (t2 -. t1), t1 -. t0)
       end
       | answer -> raise (Unexpected_answer(cmd_to_string answer))

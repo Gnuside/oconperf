@@ -3,11 +3,18 @@ open OconperfProtocol
 open OconperfPervasives
 open Printf
 open Unix
+open Core.Std
 
 let connect_to addr port socket_domain =
   print_message (sprintf "Client connects to %s:%d" addr port);
   let s = socket socket_domain SOCK_STREAM 0
-  and sa = ADDR_INET(inet_addr_of_string addr, port) in
+  and sa = ADDR_INET(inet_addr_of_string addr, port)
+  in
+  let open Core.Linux_ext in
+  let toto (fd:Unix.File_descr.t) truc =
+     Core.Linux_ext.bind_to_interface fd truc ;
+  in
+  ignore @@ toto s  (`Interface_name "eth0")
   connect s sa;
   s
 
