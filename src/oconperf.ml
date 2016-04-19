@@ -33,6 +33,7 @@ let client_args = !args @ [
   ("-I", Arg.Set_string(iface_name), "\tSet interface name");
   ("-w", Arg.Set_int(max_timeout), "\tSet maximum timeout");
   ("-s", Arg.Set_int(max_size), "\tSet maximum downloaded size");
+  ("-u", Arg.Set(test_upload), "\tTest upload speed instead of download");
 ]
 ;;
 

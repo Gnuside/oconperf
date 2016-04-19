@@ -24,7 +24,12 @@ let random_buffer = create_random_bytes random_buffer_size;;
 let rec write_cmd fd cmd_b len =
   try begin
     write fd cmd_b 0 len
-  end with Unix_error(e, _, _) -> begin
+  end with
+  | Unix_error(ECONNRESET, _, _) -> begin
+    print_error (sprintf "Write error (%s)" (error_message ECONNRESET));
+    0
+  end
+  | Unix_error(e, _, _) -> begin
     print_error (sprintf "Write error (%s), retrying..." (error_message e));
     Unix.sleep 1;
     write_cmd fd cmd_b len
@@ -80,6 +85,12 @@ and recv_cmd fd =
   with Result(c) -> c
 ;;
 
+let create_random_packet size =
+  let buf = Bytes.create size in
+  random_fill buf random_buffer random_buffer_size;
+  Packet(buf)
+;;
+
 let client_download fd size =
   print_debug (Printf.sprintf "Server, please send %d bytes" size);
   let t0 = gettimeofday () in
@@ -101,6 +112,27 @@ let client_download fd size =
   else
     failwith "Cannot send command"
   ;
+and client_upload fd size =
+  print_debug (Printf.sprintf "I send %d bytes to the server" size);
+  let t0 = gettimeofday () in
+  if send_cmd fd (Receive size) then
+    match recv_cmd fd with
+    | Answer(Ok) -> begin
+      let t1 = gettimeofday () in
+      (* print_debug "Server say OK"; *)
+      (* Then we continue *)
+      if send_cmd fd (create_random_packet size) then
+        let t2 = gettimeofday () in
+        print_message_f (fun () -> Printf.sprintf "I sent %d data" size);
+        (size, t2 -. t1, t1 -. t0)
+      else
+        failwith "Cannot send packet"
+      ;
+    end
+    | answer -> raise (Unexpected_answer(cmd_to_string answer))
+  else
+    failwith "Cannot send command"
+  ;
 ;;
 
 (* Tant qu'on est en dessous de la moitié du max time, on fait grossir
@@ -108,7 +140,7 @@ let client_download fd size =
  *
  * On arrete l'envoi/reception une fois le temps écoulé  *)
 
-let client_run ?(max_time=2.0) ?(max_size=0) fd =
+let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
   and total_size = ref 0
@@ -116,7 +148,9 @@ let client_run ?(max_time=2.0) ?(max_size=0) fd =
   and latencies = ref [] in
   begin try
     while (gettimeofday ()) -. start_time < max_time do
-      let (s, t, latency) = client_download fd !size
+      let (s, t, latency) = if test_upload
+                            then client_upload fd !size
+                            else client_download fd !size
       and now = gettimeofday () in
       latencies := latency :: !latencies;
       total_size := !total_size + s;
@@ -144,9 +178,7 @@ and server_run fd =
       (* send acknowledgement then a Packet command *)
       ignore(send_cmd fd (Answer(Ok)));
       print_message_f (fun () -> Printf.sprintf "I prepare %d bytes of random data..." s);
-      let buf = Bytes.create s in
-      random_fill buf random_buffer random_buffer_size;
-      ignore(send_cmd fd (Packet(buf)))
+      ignore(send_cmd fd (create_random_packet s))
     end
     | Receive(s) -> begin
       ignore(send_cmd fd (Answer(Ok)));

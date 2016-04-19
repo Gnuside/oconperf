@@ -19,7 +19,8 @@ let connect_to addr port socket_domain ~iface =
 
 let run () =
   let s = connect_to !addr !port !socket_domain ~iface: !iface in
-  let (spd, lat) = (client_run s ~max_time: (float_of_int !max_timeout)
+  let (spd, lat) = (client_run s ~test_upload: !test_upload
+                                 ~max_time: (float_of_int !max_timeout)
                                  ~max_size: !max_size)
   in match spd, lat with
   | Some(speed), Some(latency) -> begin
