@@ -33,46 +33,47 @@ let rec write_cmd fd cmd_b len =
 
 let send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
-  print_debug (sprintf "send_cmd: %s..."
+  (* print_debug (sprintf "send_cmd: %s..."
     (bytes_to_hex
       (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) OconperfProtocolBase.min_size))
-      true));
+      true)); *)
   (write_cmd fd cmd_b (Bytes.length cmd_b)) <> 0
 and recv_cmd fd =
   let min_read = ref OconperfProtocolBase.min_size in
-  print_debug (sprintf "recv_cmd: min_read: %d" !min_read);
+  (* print_debug (sprintf "recv_cmd: min_read: %d" !min_read); *)
   try
     while !min_read > 0 do
       try begin
         if !min_read + !rbuf_i > !rbuf_size then begin
-          let n_buf = Bytes.create (!min_read + !rbuf_i) in
+          let n_buf_size = !min_read + !rbuf_i in
+          let n_buf = Bytes.create n_buf_size in
           Bytes.blit !rbuf 0 n_buf 0 !rbuf_i;
-          rbuf := n_buf
+          rbuf := n_buf;
+          rbuf_size := n_buf_size
         end;
         (* print_debug (sprintf "recv_cmd: before rbuf_i: %d ; min_read: %d" !rbuf_i !min_read); *)
         let r = read fd !rbuf !rbuf_i !min_read in
         (* print_debug (sprintf "recv_cmd: after rbuf_i: %d ; min_read: %d ; r: %d" !rbuf_i !min_read r); *)
         if r >= !min_read then begin
           rbuf_i := !rbuf_i + r;
-          let (cmd, buf) = of_bytes (Bytes.sub !rbuf 0 !rbuf_i) in
+          let (cmd, buf) = of_bytes !rbuf !rbuf_i in
           rbuf := buf;
           rbuf_i := 0;
           rbuf_size := Bytes.length !rbuf;
-          print_debug (sprintf "recv_cmd: Result(%s) rbuf_i: %d ; min_read: %d" (cmd_to_string cmd) !rbuf_i !min_read);
+          (* print_debug (sprintf "recv_cmd: Result(%s) rbuf_i: %d ; min_read: %d" (cmd_to_string cmd) !rbuf_i !min_read); *)
           raise (Result(cmd))
         end else if r > 0 then begin
-          print_debug (sprintf "recv_cmd: before r: %d ; rbuf_i: %d ; min_read: %d" r !rbuf_i !min_read);
           rbuf_i := !rbuf_i + r;
-          min_read := !min_read - r;
-          print_debug (sprintf "recv_cmd: after r: %d ; rbuf_i: %d ; min_read: %d" r !rbuf_i !min_read)
+          min_read := !min_read - r
+          (* print_debug (sprintf "recv_cmd: after r: %d ; rbuf_i: %d ; min_read: %d" r !rbuf_i !min_read) *)
         end else if r < 0 then begin
           print_error (sprintf "error read %d" r)
         end else begin
           Unix.sleep 1
         end
       end with Exn_read_more(_, mr) -> begin
-        min_read := mr;
-        print_debug (sprintf "recv_cmd: Exn rbuf_i: %d ; min_read: %d" !rbuf_i !min_read)
+        min_read := mr
+        (* print_debug (sprintf "recv_cmd: Exn rbuf_i: %d ; min_read: %d" !rbuf_i !min_read) *)
       end
     done;
     Answer(Read_failed)
@@ -86,12 +87,12 @@ let client_download fd size =
     match recv_cmd fd with
     | Answer(Ok) -> begin
       let t1 = gettimeofday () in
-      print_debug "Server say OK";
+      (* print_debug "Server say OK"; *)
       (* Then we continue *)
       match recv_cmd fd with
-      | Packet(s) -> begin
+      | Packet(_) -> begin
         let t2 = gettimeofday () in
-        print_message (Printf.sprintf "I received %d data" (Bytes.length s));
+        (* print_message (Printf.sprintf "I received %d data" (Bytes.length s)); *)
         ((float_of_int size) /. (t2 -. t1), t1 -. t0)
       end
       | answer -> raise (Unexpected_answer(cmd_to_string answer))

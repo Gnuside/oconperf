@@ -25,6 +25,6 @@ val err_to_string : error_t -> String.t
 val cmd_to_string : cmd_t -> String.t
 
 (* returns a forged command + the unused bytes of the buffer *)
-val of_bytes : Bytes.t -> cmd_t * Bytes.t
+val of_bytes : Bytes.t -> int -> cmd_t * Bytes.t
 
 val to_bytes : cmd_t -> Bytes.t

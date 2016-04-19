@@ -100,13 +100,10 @@ and unforge_digest d =
   * - digest : MD5 digest of `data`
   *
   *)
-let forge_cmd cmd len data digest =
+let forge_cmd cmd len data =
   if not (is_valid_command_code cmd) then raise (Exn_invalid_command(cmd));
   let computed_len = Bytes.length data in
   if len <> computed_len then raise (Exn_invalid_length(len, computed_len));
-  let computed_digest = Digest.bytes data in
-  if Digest.compare computed_digest digest <> 0 then
-    raise (Exn_invalid_digest(digest, computed_digest));
   match (cmd, len) with
   | (0x01, 4) -> Send(forge_uint32 data)
   | (0x01, _) -> raise (Exn_uncoherent_cmd("Send", data))
@@ -115,7 +112,7 @@ let forge_cmd cmd len data digest =
   | (0x03, _) -> Packet(data)
   | (0x04, 1) -> Answer(forge_err data)
   | (0x04, _) -> raise (Exn_uncoherent_cmd("Answer", data))
-  | (_,_) -> raise (Exn_uncoherent_cmd(sprintf "Unknown : cmd:%d len:%d digest:%s" cmd len (Digest.to_hex digest), data))
+  | (_,_) -> raise (Exn_uncoherent_cmd(sprintf "Unknown : cmd:%d len:%d" cmd len, data))
 and unforge_cmd = function
   | Send(l) -> begin
     let data = unforge_uint32 l in
@@ -123,10 +120,7 @@ and unforge_cmd = function
       (Bytes.of_string "\x01")
       (Bytes.cat
         (unforge_uint32 4)
-        (Bytes.cat
-          data
-          (unforge_digest (Digest.bytes data))
-        )
+        data
       )
     )
   end
@@ -136,10 +130,7 @@ and unforge_cmd = function
       (Bytes.of_string "\x02")
       (Bytes.cat
         (unforge_uint32 4)
-        (Bytes.cat
-          data
-          (unforge_digest (Digest.bytes data))
-        )
+        data
       )
     )
   end
@@ -148,10 +139,7 @@ and unforge_cmd = function
       (Bytes.of_string "\x03")
       (Bytes.cat
         (unforge_uint32 (Bytes.length data))
-        (Bytes.cat
-          data
-          (unforge_digest (Digest.bytes data))
-        )
+        data
       )
     )
   end
@@ -161,18 +149,14 @@ and unforge_cmd = function
       (Bytes.of_string "\x04")
       (Bytes.cat
         (unforge_uint32 1)
-        (Bytes.cat
-          data
-          (unforge_digest (Digest.bytes data))
-        )
+        data
       )
     )
   end
 ;;
 
 (* returns a forged command + the unused bytes of the buffer *)
-let of_bytes buffer =
-  let buf_l = Bytes.length buffer in
+let of_bytes buffer buf_l =
   if buf_l < min_size then raise (Exn_read_more(buffer, min_size - buf_l))
   else begin
     let len = forge_uint32 (Bytes.sub buffer 1 4)
@@ -180,9 +164,8 @@ let of_bytes buffer =
     if buf_l - min_size < len then raise (Exn_read_more(buffer, (min_size + len) - buf_l))
     else begin
       let cmd = int_of_char (Bytes.get buffer 0)
-      and digest = forge_digest (Bytes.sub buffer (5 + len) 16)
       in (
-        forge_cmd cmd len (Bytes.sub buffer 5 len) digest,
+        forge_cmd cmd len (Bytes.sub buffer 5 len),
         Bytes.sub buffer (min_size + len) (buf_l - (min_size + len))
         )
     end
