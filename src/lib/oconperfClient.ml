@@ -5,7 +5,7 @@ open Printf
 open Unix
 
 let connect_to addr port socket_domain ?(iface=`Any) =
-  print_message (sprintf "Client connects to %s:%d" addr port);
+  print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
   let s = socket socket_domain SOCK_STREAM 0
   and sa = ADDR_INET(inet_addr_of_string addr, port) in
   begin

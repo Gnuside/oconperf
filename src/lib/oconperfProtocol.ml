@@ -92,7 +92,7 @@ let client_download fd size =
       match recv_cmd fd with
       | Packet(_) -> begin
         let t2 = gettimeofday () in
-        (* print_message (Printf.sprintf "I received %d data" (Bytes.length s)); *)
+        print_message_f (fun () -> Printf.sprintf "I received %d data" size);
         (size, t2 -. t1, t1 -. t0)
       end
       | answer -> raise (Unexpected_answer(cmd_to_string answer))
@@ -129,10 +129,10 @@ and server_run fd =
   while true do
     match recv_cmd fd with
     | Send(s) -> begin
-      print_message (Printf.sprintf "I saw you asked %d bytes" s);
+      print_message_f (fun () -> Printf.sprintf "I saw you asked %d bytes" s);
       (* send acknowledgement then a Packet command *)
       ignore(send_cmd fd (Answer(Ok)));
-      print_message (Printf.sprintf "I prepare %d bytes of random data..." s);
+      print_message_f (fun () -> Printf.sprintf "I prepare %d bytes of random data..." s);
       let buf = Bytes.create s in
       random_fill buf random_buffer random_buffer_size;
       ignore(send_cmd fd (Packet(buf)))

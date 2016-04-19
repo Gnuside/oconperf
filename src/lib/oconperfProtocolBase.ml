@@ -85,7 +85,7 @@ and unforge_err = function
 (* MD5 digests *)
 and forge_digest b =
   let buffer = bytes_to_hex b false in
-  print_debug buffer;
+  (* print_debug buffer; *)
   Digest.from_hex buffer
 and unforge_digest d =
   Bytes.of_string d
