@@ -93,7 +93,7 @@ let client_download fd size =
       | Packet(_) -> begin
         let t2 = gettimeofday () in
         (* print_message (Printf.sprintf "I received %d data" (Bytes.length s)); *)
-        ((float_of_int size) /. (t2 -. t1), t1 -. t0)
+        (size, t2 -. t1, t1 -. t0)
       end
       | answer -> raise (Unexpected_answer(cmd_to_string answer))
     end
@@ -111,18 +111,20 @@ let client_download fd size =
 let client_run ?(max_time=2.0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
-  and speeds = ref []
+  and total_size = ref 0
+  and total_time = ref 0.0
   and latencies = ref [] in
   while (gettimeofday ()) -. start_time < max_time do
-    let (speed, latency) = client_download fd !size
+    let (s, t, latency) = client_download fd !size
     and now = gettimeofday () in
-    speeds := speed :: !speeds;
     latencies := latency :: !latencies;
+    total_size := !total_size + s;
+    total_time := !total_time +. t;
     if (now -. start_time) *. 2. < max_time then
       size := !size * 2
     ;
   done;
-  (average_l !speeds, average_l !latencies)
+  (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
 and server_run fd =
   while true do
     match recv_cmd fd with
