@@ -115,6 +115,8 @@ let client_run ?(max_time=2.0) fd =
   while (gettimeofday ()) -. start_time < max_time do
     let (speed, latency) = client_download fd !size
     and now = gettimeofday () in
+    speeds := speed :: !speeds;
+    latencies := latency :: !latencies;
     if (now -. start_time) *. 2. < max_time then
       size := !size * 2
     ;
