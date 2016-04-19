@@ -1,3 +1,4 @@
+true: strict_sequence, annot, debug
 <src/lib> or <src>: include
 <**/*.ml> or <**/*.mli> or <**/*.mlpack> or <**/*.ml.depends>: ocaml, package(core, unix, threads), thread
 <**/*.byte>: ocaml, byte, program, package(core, unix, threads), thread
