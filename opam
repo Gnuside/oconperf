@@ -2,7 +2,10 @@ opam-version: "1.2"
 name: "oconperf"
 version: "0.0.1"
 maintainer: "Roland Laurès <roland.laures@netcat.io>"
-authors: "Roland Laurès <roland.laures@netcat.io>"
+authors: [
+  "Roland Laurès <roland.laures@netcat.io>",
+  "Jérôme Arzel <jerome.arzel@netcat.io>"
+]
 homepage: "http://netcat.io"
 bug-reports: "https://github.com/Gnuside/oconperf/issues"
 license: "GPL V3"
