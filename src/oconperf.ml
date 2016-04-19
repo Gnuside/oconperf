@@ -10,6 +10,7 @@ and usage = sprintf "\
 " Sys.argv.(0)
 and addr4 = ref ""
 and addr6 = ref ""
+and iface_name = ref ""
 
 let show_version () =
   print_endline (sprintf "Version: %s" version);
@@ -29,7 +30,7 @@ let server_args = !args
 ;;
 
 let client_args = !args @ [
-  ("-I", Arg.Set_string(iface), "\tSet interface name");
+  ("-I", Arg.Set_string(iface_name), "\tSet interface name");
   ("-w", Arg.Set_int(max_timeout), "\tSet maximum timeout");
 ]
 ;;
@@ -52,6 +53,11 @@ match !addr4, !addr6 with
  | _, ""  -> addr := !addr4 ; socket_domain := Unix.PF_INET
  | "", _  -> addr := !addr6 ; socket_domain := Unix.PF_INET6
  | _, _ -> failwith "Please specify only one IP address."
+;;
+
+iface := match !iface_name with
+ | ""   -> `Any
+ | name -> (`Interface_name name)
 ;;
 
 let _ =

@@ -4,17 +4,21 @@ open OconperfPervasives
 open Printf
 open Unix
 
-let connect_to addr port socket_domain =
+let connect_to addr port socket_domain ?(iface=`Any) =
   print_message (sprintf "Client connects to %s:%d" addr port);
   let s = socket socket_domain SOCK_STREAM 0
-  and sa = ADDR_INET(inet_addr_of_string addr, port)
-  and iface = `Interface_name "eth0" in
-  Core.Std.Or_error.ok_exn Core.Linux_ext.bind_to_interface s iface;
+  and sa = ADDR_INET(inet_addr_of_string addr, port) in
+  begin
+  match iface with
+  | `Any -> () (* Any is the default behavior of socket,
+                  and bind_to_interface needs root perms *)
+  | _    -> Core.Std.Or_error.ok_exn Core.Linux_ext.bind_to_interface s iface
+  end;
   connect s sa;
   s
 
 let run () =
-  let s = connect_to !addr !port !socket_domain in
+  let s = connect_to !addr !port !socket_domain ~iface: !iface in
   let (spd, lat) = client_run s ~max_time: (float_of_int !max_timeout)
   in match spd, lat with
   | Some(speed), Some(latency) -> begin
