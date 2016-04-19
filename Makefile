@@ -14,5 +14,8 @@ build_native:
 build_byte:
 	ocamlbuild -use-ocamlfind $(PROGRAM).byte
 
+profile:
+	ocamlbuild -use-ocamlfind $(PROGRAM).p.native
+
 install: build_native build_byte
 	ocamlfind install $(PROGRAM) META $(wildcard _build/*.cm[xioa]) $(wildcard _build/*.cmxa) $(wildcard *.o) $(wildcard _build/*.a) $(wildcard *.ml*)
