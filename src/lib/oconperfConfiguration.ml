@@ -7,3 +7,4 @@ and addr = ref ""
 and mpc = ref 10 (* max pending clients *)
 and iface : [ `Any | `Interface_name of string ] ref = ref `Any
 and max_timeout = ref 2
+and max_size = ref 0

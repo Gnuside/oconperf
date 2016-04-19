@@ -108,22 +108,33 @@ let client_download fd size =
  *
  * On arrete l'envoi/reception une fois le temps écoulé  *)
 
-let client_run ?(max_time=2.0) fd =
+let client_run ?(max_time=2.0) ?(max_size=0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
   and total_size = ref 0
   and total_time = ref 0.0
   and latencies = ref [] in
-  while (gettimeofday ()) -. start_time < max_time do
-    let (s, t, latency) = client_download fd !size
-    and now = gettimeofday () in
-    latencies := latency :: !latencies;
-    total_size := !total_size + s;
-    total_time := !total_time +. t;
-    if (now -. start_time) *. 2. < max_time then
-      size := !size * 2
-    ;
-  done;
+  begin try
+    while (gettimeofday ()) -. start_time < max_time do
+      let (s, t, latency) = client_download fd !size
+      and now = gettimeofday () in
+      latencies := latency :: !latencies;
+      total_size := !total_size + s;
+      begin match max_size with
+      | 0 -> ()
+      | _ -> begin
+        if !total_size >= max_size then
+          raise Exit
+        ;
+      end
+      end;
+      total_time := !total_time +. t;
+      if (now -. start_time) *. 2. < max_time then
+        size := !size * 2
+      ;
+    done
+  with Exit -> ()
+  end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
 and server_run fd =
   while true do

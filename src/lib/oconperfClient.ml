@@ -4,7 +4,7 @@ open OconperfPervasives
 open Printf
 open Unix
 
-let connect_to addr port socket_domain ?(iface=`Any) =
+let connect_to addr port socket_domain ~iface =
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
   let s = socket socket_domain SOCK_STREAM 0
   and sa = ADDR_INET(inet_addr_of_string addr, port) in
@@ -19,7 +19,8 @@ let connect_to addr port socket_domain ?(iface=`Any) =
 
 let run () =
   let s = connect_to !addr !port !socket_domain ~iface: !iface in
-  let (spd, lat) = client_run s ~max_time: (float_of_int !max_timeout)
+  let (spd, lat) = (client_run s ~max_time: (float_of_int !max_timeout)
+                                 ~max_size: !max_size)
   in match spd, lat with
   | Some(speed), Some(latency) -> begin
     print_endline (
