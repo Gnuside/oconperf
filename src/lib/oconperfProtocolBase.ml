@@ -29,7 +29,7 @@ and err_values = [
 ];;
 
 let is_valid_command_code b = List.exists (fun i -> i = b) cmd_values
-and min_size = 1 + 4 + 16;;
+and min_size = 1 + 4;;
 
 
 exception Exn_invalid_command of int
