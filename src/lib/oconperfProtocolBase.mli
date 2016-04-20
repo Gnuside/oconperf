@@ -8,7 +8,7 @@ type error_t =
 type cmd_t =
   | Send of int (* command asking to the server to send data *)
   | Receive of int (* command asking to the server to receive data *)
-  | Packet of bytes (* Command containing data *)
+  | Packet of int (* Command containing data *)
   | Answer of error_t
   | Bye
 
@@ -25,7 +25,7 @@ val err_to_string : error_t -> String.t
 
 val cmd_to_string : cmd_t -> String.t
 
-(* returns a forged command + the unused bytes of the buffer *)
-val of_bytes : Bytes.t -> int -> cmd_t * Bytes.t
+(* returns a forged command + the size of the buffer *)
+val of_bytes : Bytes.t -> int -> int -> (cmd_t * int)
 
 val to_bytes : cmd_t -> Bytes.t

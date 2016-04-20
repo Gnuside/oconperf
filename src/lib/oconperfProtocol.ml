@@ -18,62 +18,60 @@ let rbuf_size = ref (OconperfProtocolBase.min_size)
 and rbuf_i = ref 0;;
 let rbuf = ref (Bytes.create !rbuf_size);;
 
-let random_buffer_size = 2*1024*1024;;
-let random_buffer = create_random_bytes random_buffer_size;;
+(* Read and store data in rbuf, increase rbuf size if needed.
+ * Does not update rbuf_i. *)
+let rec recv_data fd offset min_read =
+  let nbuf_size = offset + min_read in
+  if nbuf_size > !rbuf_size then begin
+    (* Allocate bigger buffer *)
+    let nbuf = Bytes.create nbuf_size in
+    Bytes.blit !rbuf 0 nbuf 0 offset;
+    rbuf := nbuf;
+    rbuf_size := nbuf_size
+  end;
+  let r = read fd !rbuf offset min_read in
+  if r >= min_read then begin
+    r
+  end else if r > 0 then begin
+    (* Read more *)
+    r + (recv_data fd (offset + r) (min_read - r))
+  end else begin
+    Unix.sleep 1;
+    (* Try again *)
+    recv_data fd offset min_read
+  end
+;;
 
 let send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
-  (* print_debug (sprintf "send_cmd: %s..."
+  print_debug_f (fun () -> (sprintf "send_cmd: %s..."
     (bytes_to_hex
-      (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) OconperfProtocolBase.min_size))
-      true)); *)
+      (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) (OconperfProtocolBase.min_size + 8)))
+      true)));
   (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
 and recv_cmd fd =
   let min_read = ref OconperfProtocolBase.min_size in
-  (* print_debug (sprintf "recv_cmd: min_read: %d" !min_read); *)
   try
     while !min_read > 0 do
       try begin
-        if !min_read + !rbuf_i > !rbuf_size then begin
-          let n_buf_size = !min_read + !rbuf_i in
-          let n_buf = Bytes.create n_buf_size in
-          Bytes.blit !rbuf 0 n_buf 0 !rbuf_i;
-          rbuf := n_buf;
-          rbuf_size := n_buf_size
-        end;
-        (* print_debug (sprintf "recv_cmd: before rbuf_i: %d ; min_read: %d" !rbuf_i !min_read); *)
-        let r = read fd !rbuf !rbuf_i !min_read in
-        (* print_debug (sprintf "recv_cmd: after rbuf_i: %d ; min_read: %d ; r: %d" !rbuf_i !min_read r); *)
-        if r >= !min_read then begin
-          rbuf_i := !rbuf_i + r;
-          let (cmd, buf) = of_bytes !rbuf !rbuf_i in
-          rbuf := buf;
-          rbuf_i := 0;
-          rbuf_size := Bytes.length !rbuf;
-          (* print_debug (sprintf "recv_cmd: Result(%s) rbuf_i: %d ; min_read: %d" (cmd_to_string cmd) !rbuf_i !min_read); *)
-          raise (Result(cmd))
-        end else if r > 0 then begin
-          rbuf_i := !rbuf_i + r;
-          min_read := !min_read - r
-          (* print_debug (sprintf "recv_cmd: after r: %d ; rbuf_i: %d ; min_read: %d" r !rbuf_i !min_read) *)
-        end else if r < 0 then begin
-          print_error (sprintf "error read %d" r)
-        end else begin
-          Unix.sleep 1
-        end
+        let r = recv_data fd !rbuf_i !min_read in
+        print_debug_f (fun () -> (sprintf "recv_cmd: %s..."
+          (bytes_to_hex
+            (Bytes.sub !rbuf 0 (min !rbuf_size (OconperfProtocolBase.min_size + 8)))
+            true)));
+        rbuf_i := !rbuf_i + r;
+        (* Raise Exn_read_more when we know the packet size *)
+        let (cmd, _) = of_bytes !rbuf 0 !rbuf_i in
+        print_debug_f (fun () -> sprintf "recv_cmd: %s..." (cmd_to_string cmd));
+        rbuf_i := 0;
+        raise (Result(cmd))
       end with Exn_read_more(_, mr) -> begin
+        print_debug_f (fun () -> (sprintf "Read more %d..." mr));
         min_read := mr
-        (* print_debug (sprintf "recv_cmd: Exn rbuf_i: %d ; min_read: %d" !rbuf_i !min_read) *)
       end
     done;
     Answer(Read_failed)
   with Result(c) -> c
-;;
-
-let create_random_packet size =
-  let buf = Bytes.create size in
-  random_fill buf random_buffer random_buffer_size;
-  Packet(buf)
 ;;
 
 let client_download fd size =
@@ -86,10 +84,13 @@ let client_download fd size =
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
       match recv_cmd fd with
-      | Packet(_) -> begin
+      | Packet(size') -> begin
         let t2 = gettimeofday () in
-        print_message_f (fun () -> Printf.sprintf "I received %d data" size);
-        (size, t2 -. t1, t1 -. t0)
+        if size == size'
+        then begin
+          print_message_f (fun () -> Printf.sprintf "I received %d data" size');
+          (size, t2 -. t1, t1 -. t0)
+        end else raise (Unexpected_answer("Size inconsistancy between Receive and Packet commands."));
       end
       | answer -> raise (Unexpected_answer(cmd_to_string answer))
     end
@@ -106,7 +107,7 @@ and client_upload fd size =
       let t1 = gettimeofday () in
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
-      if send_cmd fd (create_random_packet size) then
+      if send_cmd fd (Packet(size)) then
         let t2 = gettimeofday () in
         print_message_f (fun () -> Printf.sprintf "I sent %d data" size);
         (size, t2 -. t1, t1 -. t0)
@@ -166,14 +167,14 @@ and server_run fd =
         print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
         (* send acknowledgement then a Packet command *)
         ignore(send_cmd fd (Answer(Ok)));
-        ignore(send_cmd fd (create_random_packet s))
+        ignore(send_cmd fd (Packet(s)))
       end
       | Receive(s) -> begin
         print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
         ignore(send_cmd fd (Answer(Ok)));
         match recv_cmd fd with
-        | Packet(b) -> begin
-          if s == (Bytes.length b)
+        | Packet(s') -> begin
+          if s == s'
           then ignore(send_cmd fd (Answer(Ok)))
           else raise (Unexpected_request("Size inconsistancy between Receive and Packet commands."))
         end
