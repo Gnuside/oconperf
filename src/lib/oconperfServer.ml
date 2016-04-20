@@ -50,8 +50,13 @@ let run () =
     let (fd, remote) = accept s
     in
     match fork() with
-    | 0  -> client_connection (fd, remote); exit 0
-    | id -> close fd
+    | 0  -> begin
+      if Unix.fork() <> 0 then exit 0;
+      try
+        client_connection (fd, remote); exit 0
+      with _ -> exit 1
+    end
+    | id -> close fd; ignore(Unix.waitpid [] id)
   done;
   close s;
   0

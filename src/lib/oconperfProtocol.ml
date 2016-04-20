@@ -21,28 +21,13 @@ let rbuf = ref (Bytes.create !rbuf_size);;
 let random_buffer_size = 2*1024*1024;;
 let random_buffer = create_random_bytes random_buffer_size;;
 
-let rec write_cmd fd cmd_b len =
-  try begin
-    write fd cmd_b 0 len
-  end with
-  | Unix_error(ECONNRESET, _, _) -> begin
-    print_error (sprintf "Write error (%s)" (error_message ECONNRESET));
-    0
-  end
-  | Unix_error(e, _, _) -> begin
-    print_error (sprintf "Write error (%s), retrying..." (error_message e));
-    Unix.sleep 1;
-    write_cmd fd cmd_b len
-  end
-;;
-
 let send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
   (* print_debug (sprintf "send_cmd: %s..."
     (bytes_to_hex
       (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) OconperfProtocolBase.min_size))
       true)); *)
-  (write_cmd fd cmd_b (Bytes.length cmd_b)) <> 0
+  (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
 and recv_cmd fd =
   let min_read = ref OconperfProtocolBase.min_size in
   (* print_debug (sprintf "recv_cmd: min_read: %d" !min_read); *)
@@ -168,30 +153,42 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
       if max_packet_size <> 0 && !size >= max_packet_size then
         size := min !size max_packet_size
       ;
-    done
+    done;
+    ignore(send_cmd fd Bye)
   with Exit -> ()
   end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
 and server_run fd =
-  while true do
-    match recv_cmd fd with
-    | Send(s) -> begin
-      print_message_f (fun () -> Printf.sprintf "I saw you asked %d bytes" s);
-      (* send acknowledgement then a Packet command *)
-      ignore(send_cmd fd (Answer(Ok)));
-      print_message_f (fun () -> Printf.sprintf "I prepare %d bytes of random data..." s);
-      ignore(send_cmd fd (create_random_packet s))
-    end
-    | Receive(s) -> begin
-      ignore(send_cmd fd (Answer(Ok)));
+  try
+    while true do
       match recv_cmd fd with
-      | Packet(b) -> begin
-        if s == (Bytes.length b)
-        then ignore(send_cmd fd (Answer(Ok)))
-        else raise (Unexpected_request("Size inconsistancy between Receive and Packet commands."))
+      | Send(s) -> begin
+        print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
+        (* send acknowledgement then a Packet command *)
+        ignore(send_cmd fd (Answer(Ok)));
+        ignore(send_cmd fd (create_random_packet s))
       end
+      | Receive(s) -> begin
+        print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
+        ignore(send_cmd fd (Answer(Ok)));
+        match recv_cmd fd with
+        | Packet(b) -> begin
+          if s == (Bytes.length b)
+          then ignore(send_cmd fd (Answer(Ok)))
+          else raise (Unexpected_request("Size inconsistancy between Receive and Packet commands."))
+        end
+        | answer -> raise (Unexpected_request(cmd_to_string answer))
+      end
+      | Bye -> raise Exit
       | answer -> raise (Unexpected_request(cmd_to_string answer))
-    end
-    | answer -> raise (Unexpected_request(cmd_to_string answer))
-  done
+    done
+  with
+  | Unix_error(ECONNRESET, _, _)
+  | Unix_error(EPIPE, _, _) -> begin
+    print_error (sprintf "Write error (%s)" (error_message ECONNRESET))
+  end
+  | Unix_error(e, _, _) -> begin
+    print_error (sprintf "Unix error (%s)" (error_message e))
+  end
+  | Exit -> ()
 ;;

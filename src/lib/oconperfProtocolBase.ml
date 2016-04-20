@@ -15,12 +15,14 @@ type cmd_t =
   | Receive of int (* command asking to the server to receive data *)
   | Packet of bytes (* Command containing data *)
   | Answer of error_t
+  | Bye
 
 let cmd_values = [
   0x01 ; (* Send *)
   0x02 ; (* Receive *)
   0x03 ; (* Packet *)
-  0x04 (* Answer *)
+  0x04 ; (* Answer *)
+  0xFF ; (* Bye *)
 ]
 and err_values = [
   0x00 ; (* OK *)
@@ -51,6 +53,7 @@ let cmd_to_string = function
   | Receive(l) -> sprintf "Receive(%d)" l
   | Answer(err) -> sprintf "Answer(%s)" (err_to_string err)
   | Packet(data) -> sprintf "Packet(%d)" (Bytes.length data)
+  | Bye -> "Bye"
 ;;
 
 (* forge : get ocaml value from bytes stream
@@ -112,6 +115,8 @@ let forge_cmd cmd len data =
   | (0x03, _) -> Packet(data)
   | (0x04, 1) -> Answer(forge_err data)
   | (0x04, _) -> raise (Exn_uncoherent_cmd("Answer", data))
+  | (0xFF, 0) -> Bye
+  | (0xFF, _) -> raise (Exn_uncoherent_cmd("Bye", data))
   | (_,_) -> raise (Exn_uncoherent_cmd(sprintf "Unknown : cmd:%d len:%d" cmd len, data))
 and unforge_cmd = function
   | Send(l) -> begin
@@ -151,6 +156,12 @@ and unforge_cmd = function
         (unforge_uint32 1)
         data
       )
+    )
+  end
+  | Bye -> begin
+    (Bytes.cat
+      (Bytes.of_string "\xFF")
+      (unforge_uint32 0)
     )
   end
 ;;

@@ -10,6 +10,7 @@ type cmd_t =
   | Receive of int (* command asking to the server to receive data *)
   | Packet of bytes (* Command containing data *)
   | Answer of error_t
+  | Bye
 
 val min_size : int
 
