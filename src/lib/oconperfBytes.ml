@@ -12,8 +12,7 @@ let bytes_to_hex b with_space =
   buffer
 
 (* fill a bytes buffer with random data *)
-let random_fill bytes random_buffer random_buffer_size =
-  let len = Bytes.length bytes in
+let random_fill bytes len random_buffer random_buffer_size =
   let i = ref 0
   and l = ref (min len (Random.int random_buffer_size)) in
   while !i < len do

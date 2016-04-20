@@ -24,10 +24,9 @@ let rec recv_data fd offset min_read =
   let nbuf_size = offset + min_read in
   if nbuf_size > !rbuf_size then begin
     (* Allocate bigger buffer *)
-    let nbuf = Bytes.create nbuf_size in
-    Bytes.blit !rbuf 0 nbuf 0 offset;
-    rbuf := nbuf;
-    rbuf_size := nbuf_size
+    rbuf := Bytes.extend !rbuf 0 (nbuf_size - !rbuf_size);
+    rbuf_size := nbuf_size;
+    print_debug_f (fun () -> (sprintf "reallocate buffer: %d" nbuf_size));
   end;
   let r = read fd !rbuf offset min_read in
   if r >= min_read then begin

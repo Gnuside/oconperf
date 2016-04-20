@@ -141,7 +141,7 @@ and unforge_cmd = function
   end
   | Packet(len) -> begin
     let data = Bytes.create len in
-    random_fill data random_buffer random_buffer_size;
+    random_fill data len random_buffer random_buffer_size;
     (Bytes.cat
       (Bytes.of_string "\x03")
       (Bytes.cat
