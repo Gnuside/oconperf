@@ -59,12 +59,12 @@ let cmd_to_string = function
  * Values are put in BigEndian representation.
  *)
 (* 32 bits integers *)
-let forge_uint32 buffer =
+let forge_uint32 buffer offset =
   (* doens't work on 32 bits architectures *)
-  ((int_of_char (Bytes.get buffer 0)) lsl 24) lor
-  ((int_of_char (Bytes.get buffer 1)) lsl 16) lor
-  ((int_of_char (Bytes.get buffer 2)) lsl  8) lor
-  ((int_of_char (Bytes.get buffer 3)) lsl  0)
+  ((int_of_char (Bytes.get buffer offset)) lsl 24) lor
+  ((int_of_char (Bytes.get buffer (offset + 1))) lsl 16) lor
+  ((int_of_char (Bytes.get buffer (offset + 2))) lsl  8) lor
+  ((int_of_char (Bytes.get buffer (offset + 3))) lsl  0)
 and unforge_uint32 u32 =
   let f i =
     char_of_int ((u32 lsr (8*(3-i))) land 0xFF)
@@ -105,9 +105,9 @@ let forge_cmd cmd len data =
   let computed_len = Bytes.length data in
   if len <> computed_len then raise (Exn_invalid_length(len, computed_len));
   match (cmd, len) with
-  | (0x01, 4) -> Send(forge_uint32 data)
+  | (0x01, 4) -> Send(forge_uint32 data 0)
   | (0x01, _) -> raise (Exn_uncoherent_cmd("Send", data))
-  | (0x02, 4) -> Receive(forge_uint32 data)
+  | (0x02, 4) -> Receive(forge_uint32 data 0)
   | (0x02, _) -> raise (Exn_uncoherent_cmd("Receive", data))
   | (0x03, _) -> Packet(data)
   | (0x04, 1) -> Answer(forge_err data)
@@ -159,7 +159,7 @@ and unforge_cmd = function
 let of_bytes buffer buf_l =
   if buf_l < min_size then raise (Exn_read_more(buffer, min_size - buf_l))
   else begin
-    let len = forge_uint32 (Bytes.sub buffer 1 4)
+    let len = forge_uint32 buffer 1
     in
     if buf_l - min_size < len then raise (Exn_read_more(buffer, (min_size + len) - buf_l))
     else begin
