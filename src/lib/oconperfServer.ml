@@ -54,7 +54,10 @@ let run () =
       if Unix.fork() <> 0 then exit 0;
       try
         client_connection (fd, remote); exit 0
-      with _ -> exit 1
+      with _ -> begin
+        client_disconnection (fd, remote);
+        exit 1
+      end
     end
     | id -> close fd; ignore(Unix.waitpid [] id)
   done;
