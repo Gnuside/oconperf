@@ -140,7 +140,7 @@ and client_upload fd size =
  *
  * On arrete l'envoi/reception une fois le temps écoulé  *)
 
-let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) fd =
+let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
   and total_size = ref 0
@@ -152,19 +152,21 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) fd =
                             then client_upload fd !size
                             else client_download fd !size
       and now = gettimeofday () in
+      (* Collect data *)
       latencies := latency :: !latencies;
       total_size := !total_size + s;
-      begin match max_size with
-      | 0 -> ()
-      | _ -> begin
-        if !total_size >= max_size then
-          raise Exit
-        ;
-      end
-      end;
       total_time := !total_time +. t;
+      (* Maximum total size limit *)
+      if max_size <> 0 && !total_size >= max_size then
+        raise Exit
+      ;
+      (* Increase size value *)
       if (now -. start_time) *. 2. < max_time then
         size := !size * 2
+      ;
+      (* Maximum packet size limit *)
+      if max_packet_size <> 0 && !size >= max_packet_size then
+        size := min !size max_packet_size
       ;
     done
   with Exit -> ()

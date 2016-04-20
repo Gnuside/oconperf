@@ -23,6 +23,7 @@ let args = ref [
   ("-p", Arg.Set_int(port), "\tSet server port (to connect to ; on to listen to)");
   ("-a4", Arg.Set_string(addr4), "\tSet server address (to connect to ; on to listen to)");
   ("-a6", Arg.Set_string(addr6), "\tSet server address (to connect to ; on to listen to)");
+  ("-S", Arg.Set_int(max_packet_size), "\tSet maximum packet size");
 ]
 ;;
 
