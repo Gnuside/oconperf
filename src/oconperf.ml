@@ -35,6 +35,7 @@ let client_args = !args @ [
   ("-w", Arg.Set_int(max_timeout), "\tSet maximum timeout");
   ("-s", Arg.Set_int(max_size), "\tSet maximum downloaded size");
   ("-u", Arg.Set(test_upload), "\tTest upload speed instead of download");
+  ("-h", Arg.Set(human_readable), "\tPrint sizes in powers of 1024 (e.g., 1023M)");
 ]
 ;;
 
