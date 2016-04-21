@@ -11,6 +11,8 @@ type error_t =
   | Read_failed
   | Read_big
 
+type header_t = int * int
+
 type cmd_t =
   | Send of int (* command asking to the server to send data *)
   | Receive of int (* command asking to the server to receive data *)
@@ -172,27 +174,36 @@ and unforge_cmd = function
   end
 ;;
 
-(* returns a forged command + the size of the buffer *)
-let of_bytes buffer offset buf_len =
-  print_message (sprintf "of_bytes offset %d buf_len %d" offset buf_len);
+let of_bytes_header buffer offset buf_len =
   let header_size = min_size
   and len = buf_len - offset in
   if len < header_size
-  then (None, header_size - len) (* Read more *)
+  then None
   else begin
-    let data_len = forge_uint32 buffer (offset + 1) in
-    let cmd_len = header_size + data_len in
-    print_message (sprintf "of_bytes data_len %d cmd_len %d" data_len cmd_len);
-    if len < cmd_len
-    then (None, cmd_len - len) (* Read more *)
-    else begin
-      let cmd = int_of_char (Bytes.get buffer offset)
-      in (
-        Some (forge_cmd cmd buffer (offset + header_size) data_len),
-        len - cmd_len (* Remaining data *)
-      )
-    end
+    let cmd = int_of_char (Bytes.get buffer offset)
+    and data_len = forge_uint32 buffer (offset + 1) in
+    Some (cmd, data_len)
   end
+;;
+
+let of_bytes_body buffer offset buf_len (cmd, data_len) =
+  let len = buf_len - offset in
+  if len < data_len then
+    None
+  else
+    Some (forge_cmd cmd buffer offset data_len)
+  ;
+;;
+
+let of_bytes buffer offset buf_len =
+  let header_size = min_size
+  and len = buf_len - offset in
+  match (of_bytes_header buffer offset buf_len) with
+  | Some(cmd, data_len) -> begin
+    let opt = (of_bytes_body buffer (offset + header_size) buf_len (cmd, data_len))
+    in (opt, data_len - len)
+  end
+  | None -> (None, header_size - len)
 ;;
 
 let to_bytes cmd = unforge_cmd cmd

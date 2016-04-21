@@ -6,6 +6,8 @@ type error_t =
   | Read_failed
   | Read_big
 
+type header_t = int * int (* command and data size *)
+
 type cmd_t =
   | Send of int (* command asking to the server to send data *)
   | Receive of int (* command asking to the server to receive data *)
@@ -26,7 +28,14 @@ val err_to_string : error_t -> String.t
 
 val cmd_to_string : cmd_t -> String.t
 
-(* returns a forged command + the size of the buffer *)
+(*
+ * Returns the header cmd * data_size. This method assume that you have a buffer
+ * in the correct size (Oconperf_protocol_base.min_size)
+ *)
+val of_bytes_header : Bytes.t -> int -> int -> header_t option
+val of_bytes_body : Bytes.t -> int -> int -> header_t -> cmd_t option
+
+(* returns a forged Some(command) + the size of remaining data or None + missing packet length *)
 val of_bytes : Bytes.t -> int -> int -> (cmd_t option * int)
 
 val to_bytes : cmd_t -> Bytes.t

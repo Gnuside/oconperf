@@ -52,36 +52,40 @@ let send_cmd fd cmd =
 and recv_cmd fd max_packet_size =
   let max_read = if max_packet_size <> 0
                  then Oconperf_protocol_base.min_size + max_packet_size
-                 else 0 in
-  let rec recv_cmd' offset to_read =
-    if to_read <= 0 then
-      Answer(Read_failed)
-    else begin
-      let r = recv_data fd offset to_read in
-      print_debug_f (fun () -> (sprintf "recv_cmd: %s..."
-        (bytes_to_hex
-          (Bytes.sub !rbuf offset (min (!rbuf_size - offset) (Oconperf_protocol_base.min_size + 8)))
-          true)));
-      (* Raise Exn_read_more when we know the packet size *)
-      match of_bytes !rbuf 0 (offset + r) with
-      | Some(cmd), remain -> begin
-        if remain > 0 then
-          failwith "There are more bytes read than asked, this should not happen"
-        ;
-        print_debug_f (fun () -> sprintf "recv_cmd: %s..." (cmd_to_string cmd));
+                 else 0
+  in
+  let recv_body offset (cmd_num, data_len) =
+    if max_read <> 0 && data_len > max_read then begin
+      print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B" data_len));
+      Answer(Read_big)
+    end else begin
+      let r = recv_data fd offset data_len in
+      print_debug_f (fun () -> (sprintf "recv_body: %s..."
+         (bytes_to_hex
+           (Bytes.sub !rbuf offset (min (!rbuf_size - offset) (Oconperf_protocol_base.min_size + 8)))
+           true)));
+      match of_bytes_body !rbuf offset (offset + r) (cmd_num, data_len) with
+      | Some(cmd) -> begin
+        print_debug_f (fun () -> sprintf "recv_body: %s" (cmd_to_string cmd));
         cmd
       end
-      | None, read_more -> begin
-        print_debug_f (fun () -> (sprintf "Read more %d..." read_more));
-        if max_read <> 0 && read_more > max_read then begin
-          print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B" read_more));
-          Answer(Read_big)
-        end else
-          recv_cmd' (offset + r) read_more
-        ;
+      | None -> begin
+        failwith "recv_body: There wasn't enough bytes asked, this should not happen"
       end
     end
-  in recv_cmd' 0 Oconperf_protocol_base.min_size
+  in let recv_header () =
+    let r = recv_data fd 0 Oconperf_protocol_base.min_size in
+    print_debug_f (fun () -> (sprintf "recv_header: %s" (bytes_to_hex
+      (Bytes.sub !rbuf 0 r)
+      true)));
+    match of_bytes_header !rbuf 0 r with
+    | Some(cmd_num, data_len) -> begin
+      recv_body r (cmd_num, data_len)
+    end
+    | None -> begin
+      failwith "recv_header: There wasn't enough bytes asked, this should not happen"
+    end
+  in recv_header ()
 ;;
 
 let client_download fd size max_packet_size =
