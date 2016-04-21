@@ -1,6 +1,6 @@
-open OconperfConfiguration
-open OconperfProtocol
-open OconperfPervasives
+open Oconperf_configuration
+open Oconperf_protocol
+open Oconperf_pervasives
 open Printf
 open Unix
 

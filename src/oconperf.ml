@@ -1,5 +1,5 @@
 open Printf
-open OconperfConfiguration
+open Oconperf_configuration
 
 type run_t = Client | Server
 
@@ -68,8 +68,8 @@ let _ =
   exit
   (Unix.handle_unix_error (
     match !running with
-     | Some(Server) -> OconperfServer.run
-     | Some(Client) -> OconperfClient.run
+     | Some(Server) -> Oconperf_server.run
+     | Some(Client) -> Oconperf_client.run
      | None -> (
          Arg.usage !args usage ;
          failwith "Please specify the action argument."

@@ -1,5 +1,5 @@
-open OconperfBytes
-open OconperfPervasives
+open Oconperf_bytes
+open Oconperf_pervasives
 open Printf
 (* Client connects, then ask server to send (Send) to the client data
  * or to receive (Receive) data from the client *)

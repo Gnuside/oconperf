@@ -1,5 +1,5 @@
-open OconperfConfiguration
-open OconperfProtocol
+open Oconperf_configuration
+open Oconperf_protocol
 open Printf
 open Unix
 

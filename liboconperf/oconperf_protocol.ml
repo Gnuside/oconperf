@@ -1,7 +1,7 @@
-open OconperfProtocolBase
-open OconperfPervasives
-open OconperfList
-open OconperfBytes
+open Oconperf_protocol_base
+open Oconperf_pervasives
+open Oconperf_list
+open Oconperf_bytes
 open Printf
 open Unix;;
 (* Client connects, then ask server to send (Send) to the client data
@@ -14,7 +14,7 @@ exception Unexpected_answer of string;;
 exception Unexpected_request of string;;
 exception Invalid_request of string;;
 
-let rbuf_size = ref (OconperfProtocolBase.min_size)
+let rbuf_size = ref (Oconperf_protocol_base.min_size)
 and rbuf_i = ref 0;;
 let rbuf = ref (Bytes.create !rbuf_size);;
 
@@ -45,18 +45,18 @@ let send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
   print_debug_f (fun () -> (sprintf "send_cmd: %s..."
     (bytes_to_hex
-      (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) (OconperfProtocolBase.min_size + 8)))
+      (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) (Oconperf_protocol_base.min_size + 8)))
       true)));
   (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
 and recv_cmd fd =
-  let min_read = ref OconperfProtocolBase.min_size in
+  let min_read = ref Oconperf_protocol_base.min_size in
   try
     while !min_read > 0 do
       try begin
         let r = recv_data fd !rbuf_i !min_read in
         print_debug_f (fun () -> (sprintf "recv_cmd: %s..."
           (bytes_to_hex
-            (Bytes.sub !rbuf 0 (min !rbuf_size (OconperfProtocolBase.min_size + 8)))
+            (Bytes.sub !rbuf 0 (min !rbuf_size (Oconperf_protocol_base.min_size + 8)))
             true)));
         rbuf_i := !rbuf_i + r;
         (* Raise Exn_read_more when we know the packet size *)

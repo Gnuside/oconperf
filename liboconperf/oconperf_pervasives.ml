@@ -1,4 +1,4 @@
-open OconperfConfiguration
+open Oconperf_configuration
 
 let print_message message =
   if !quiet == false
