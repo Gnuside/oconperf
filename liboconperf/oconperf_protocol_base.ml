@@ -9,6 +9,7 @@ type error_t =
   | Parsing
   | Cmd
   | Read_failed
+  | Read_big
 
 type cmd_t =
   | Send of int (* command asking to the server to send data *)
@@ -48,6 +49,7 @@ let err_to_string = function
   | Parsing -> "Parsing"
   | Cmd -> "Cmd"
   | Read_failed -> "Read_failed"
+  | Read_big -> "Read_big"
 ;;
 
 let cmd_to_string = function
@@ -81,12 +83,14 @@ and forge_err buffer offset =
   | '\x01' -> Parsing
   | '\x02' -> Cmd
   | '\x03' -> Read_failed
+  | '\x04' -> Read_big
   | err -> raise (Exn_invalid_error_code(err))
 and unforge_err = function
   | Ok      -> Bytes.make 1 '\x00'
   | Parsing -> Bytes.make 1 '\x01'
   | Cmd     -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
+  | Read_big    -> Bytes.make 1 '\x04'
 (* MD5 digests *)
 and forge_digest b =
   let buffer = bytes_to_hex b false in
@@ -169,17 +173,23 @@ and unforge_cmd = function
 ;;
 
 (* returns a forged command + the size of the buffer *)
-let of_bytes buffer offset buf_l =
-  if buf_l < min_size then raise (Exn_read_more(buffer, min_size - buf_l))
+let of_bytes buffer offset buf_len =
+  print_message (sprintf "of_bytes offset %d buf_len %d" offset buf_len);
+  let header_size = min_size
+  and len = buf_len - offset in
+  if len < header_size
+  then (None, header_size - len) (* Read more *)
   else begin
-    let len = forge_uint32 buffer (offset + 1)
-    in
-    if buf_l - min_size < len then raise (Exn_read_more(buffer, (min_size + len) - buf_l))
+    let data_len = forge_uint32 buffer (offset + 1) in
+    let cmd_len = header_size + data_len in
+    print_message (sprintf "of_bytes data_len %d cmd_len %d" data_len cmd_len);
+    if len < cmd_len
+    then (None, cmd_len - len) (* Read more *)
     else begin
       let cmd = int_of_char (Bytes.get buffer offset)
       in (
-        forge_cmd cmd buffer (offset + min_size) len,
-        (min_size + len)
+        Some (forge_cmd cmd buffer (offset + header_size) data_len),
+        len - cmd_len (* Remaining data *)
       )
     end
   end

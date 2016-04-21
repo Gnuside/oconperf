@@ -27,9 +27,9 @@ let client_disconnection (fd, remote) =
   ()
 ;;
 
-let client_connection (fd, remote)  =
+let client_connection ?(max_packet_size=0) (fd, remote) =
   print_endline (sprintf "  Connection from: %s" (string_of_sockaddr remote));
-  server_run fd;
+  server_run fd ~max_packet_size: max_packet_size;
   client_disconnection (fd, remote);
   ()
 ;;
@@ -53,7 +53,7 @@ let run () =
     | 0  -> begin
       if Unix.fork() <> 0 then exit 0;
       try
-        client_connection (fd, remote); exit 0
+        client_connection (fd, remote) ~max_packet_size: !max_packet_size; exit 0
       with _ -> begin
         client_disconnection (fd, remote);
         exit 1

@@ -4,6 +4,7 @@ type error_t =
   | Parsing
   | Cmd
   | Read_failed
+  | Read_big
 
 type cmd_t =
   | Send of int (* command asking to the server to send data *)
@@ -26,6 +27,6 @@ val err_to_string : error_t -> String.t
 val cmd_to_string : cmd_t -> String.t
 
 (* returns a forged command + the size of the buffer *)
-val of_bytes : Bytes.t -> int -> int -> (cmd_t * int)
+val of_bytes : Bytes.t -> int -> int -> (cmd_t option * int)
 
 val to_bytes : cmd_t -> Bytes.t

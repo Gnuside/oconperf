@@ -10,16 +10,16 @@ open Unix;;
 Random.self_init ();
 
 exception Result of cmd_t;;
-exception Unexpected_answer of string;;
-exception Unexpected_request of string;;
+exception Unexpected_answer of cmd_t;;
+exception Invalid_answer of string;;
+exception Unexpected_request of cmd_t;;
 exception Invalid_request of string;;
+exception Cannot_send of cmd_t;;
 
-let rbuf_size = ref (Oconperf_protocol_base.min_size)
-and rbuf_i = ref 0;;
+let rbuf_size = ref (Oconperf_protocol_base.min_size * 2);;
 let rbuf = ref (Bytes.create !rbuf_size);;
 
-(* Read and store data in rbuf, increase rbuf size if needed.
- * Does not update rbuf_i. *)
+(* Read and store data in rbuf, increase rbuf size if needed. *)
 let rec recv_data fd offset min_read =
   let nbuf_size = offset + min_read in
   if nbuf_size > !rbuf_size then begin
@@ -35,6 +35,7 @@ let rec recv_data fd offset min_read =
     (* Read more *)
     r + (recv_data fd (offset + r) (min_read - r))
   end else begin
+    print_debug_f (fun () -> "recv_data: wait and try again...");
     Unix.sleep 1;
     (* Try again *)
     recv_data fd offset min_read
@@ -48,75 +49,87 @@ let send_cmd fd cmd =
       (Bytes.sub cmd_b 0 (min (Bytes.length cmd_b) (Oconperf_protocol_base.min_size + 8)))
       true)));
   (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
-and recv_cmd fd =
-  let min_read = ref Oconperf_protocol_base.min_size in
-  try
-    while !min_read > 0 do
-      try begin
-        let r = recv_data fd !rbuf_i !min_read in
-        print_debug_f (fun () -> (sprintf "recv_cmd: %s..."
-          (bytes_to_hex
-            (Bytes.sub !rbuf 0 (min !rbuf_size (Oconperf_protocol_base.min_size + 8)))
-            true)));
-        rbuf_i := !rbuf_i + r;
-        (* Raise Exn_read_more when we know the packet size *)
-        let (cmd, _) = of_bytes !rbuf 0 !rbuf_i in
+and recv_cmd fd max_packet_size =
+  let max_read = if max_packet_size <> 0
+                 then Oconperf_protocol_base.min_size + max_packet_size
+                 else 0 in
+  let rec recv_cmd' offset to_read =
+    if to_read <= 0 then
+      Answer(Read_failed)
+    else begin
+      let r = recv_data fd offset to_read in
+      print_debug_f (fun () -> (sprintf "recv_cmd: %s..."
+        (bytes_to_hex
+          (Bytes.sub !rbuf offset (min (!rbuf_size - offset) (Oconperf_protocol_base.min_size + 8)))
+          true)));
+      (* Raise Exn_read_more when we know the packet size *)
+      match of_bytes !rbuf 0 (offset + r) with
+      | Some(cmd), remain -> begin
+        if remain > 0 then
+          failwith "There are more bytes read than asked, this should not happen"
+        ;
         print_debug_f (fun () -> sprintf "recv_cmd: %s..." (cmd_to_string cmd));
-        rbuf_i := 0;
-        raise (Result(cmd))
-      end with Exn_read_more(_, mr) -> begin
-        print_debug_f (fun () -> (sprintf "Read more %d..." mr));
-        min_read := mr
+        cmd
       end
-    done;
-    Answer(Read_failed)
-  with Result(c) -> c
+      | None, read_more -> begin
+        print_debug_f (fun () -> (sprintf "Read more %d..." read_more));
+        if max_read <> 0 && read_more > max_read then begin
+          print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B" read_more));
+          Answer(Read_big)
+        end else
+          recv_cmd' (offset + r) read_more
+        ;
+      end
+    end
+  in recv_cmd' 0 Oconperf_protocol_base.min_size
 ;;
 
-let client_download fd size =
-  print_debug (Printf.sprintf "Server, please send %d bytes" size);
+let client_download fd size max_packet_size =
+  print_debug (sprintf "Server, please send %d bytes" size);
   let t0 = gettimeofday () in
   if send_cmd fd (Send size) then
-    match recv_cmd fd with
+    match recv_cmd fd max_packet_size with
     | Answer(Ok) -> begin
       let t1 = gettimeofday () in
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
-      match recv_cmd fd with
+      match recv_cmd fd max_packet_size with
       | Packet(size') -> begin
         let t2 = gettimeofday () in
         if size == size'
         then begin
-          print_message_f (fun () -> Printf.sprintf "I received %d data" size');
+          print_message_f (fun () -> sprintf "I received %d data" size');
           (size, t2 -. t1, t1 -. t0)
-        end else raise (Unexpected_answer("Size inconsistancy between Receive and Packet commands."));
+        end else
+          raise (Invalid_answer("Size inconsistancy between Receive and Packet commands."))
+        ;
       end
-      | answer -> raise (Unexpected_answer(cmd_to_string answer))
+      | answer -> raise (Unexpected_answer(answer))
     end
-    | answer -> raise (Unexpected_answer(cmd_to_string answer))
+    | answer -> raise (Unexpected_answer(answer))
   else
-    failwith "Cannot send command"
+    raise (Cannot_send(Send size))
   ;
-and client_upload fd size =
+and client_upload fd size max_packet_size =
   print_debug (Printf.sprintf "I send %d bytes to the server" size);
   let t0 = gettimeofday () in
   if send_cmd fd (Receive size) then
-    match recv_cmd fd with
+    match recv_cmd fd max_packet_size with
     | Answer(Ok) -> begin
       let t1 = gettimeofday () in
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
-      if send_cmd fd (Packet(size)) then
+      if send_cmd fd (Packet size) then
         let t2 = gettimeofday () in
-        print_message_f (fun () -> Printf.sprintf "I sent %d data" size);
+        print_message_f (fun () -> sprintf "I sent %d data" size);
         (size, t2 -. t1, t1 -. t0)
       else
-        failwith "Cannot send packet"
+        raise (Cannot_send(Packet size))
       ;
     end
-    | answer -> raise (Unexpected_answer(cmd_to_string answer))
+    | answer -> raise (Unexpected_answer(answer))
   else
-    failwith "Cannot send command"
+    raise (Cannot_send(Receive size))
   ;
 ;;
 
@@ -134,8 +147,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   begin try
     while (gettimeofday ()) -. start_time < max_time do
       let (s, t, latency) = if test_upload
-                            then client_upload fd !size
-                            else client_download fd !size
+                            then client_upload fd !size max_packet_size
+                            else client_download fd !size max_packet_size
       and now = gettimeofday () in
       (* Collect data *)
       latencies := latency :: !latencies;
@@ -155,32 +168,67 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
       ;
     done;
     ignore(send_cmd fd Bye)
-  with Exit -> ()
+  with
+  | Unix_error(e, _, _) -> begin
+    print_error (sprintf "Unix error (%s)" (error_message e))
+  end
+  | Cannot_send(cmd) -> begin
+    print_error (sprintf "Unable to send command to the server: %s" (cmd_to_string cmd))
+  end
+  | Invalid_answer(s) -> begin
+    print_error (sprintf "Invalid answer from the server: %s" s)
+  end
+  | Unexpected_answer(cmd) -> begin
+    print_error (sprintf "Unexpected answer from the server: %s" (cmd_to_string cmd))
+  end
+  | Exit -> begin
+    print_error "Exit..."
+  end
   end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
-and server_run fd =
+and server_run ?(max_packet_size=0) fd =
   try
     while true do
-      match recv_cmd fd with
+      print_message "Wait for client request...";
+      match recv_cmd fd max_packet_size with
       | Send(s) -> begin
         print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
+        let my_answer = (if max_packet_size <> 0 && s > max_packet_size
+                        then Answer(Read_big)
+                        else Answer(Ok)) in
+        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         (* send acknowledgement then a Packet command *)
-        ignore(send_cmd fd (Answer(Ok)));
-        ignore(send_cmd fd (Packet(s)))
+        if not (send_cmd fd my_answer) then
+          raise (Cannot_send my_answer)
+        ;
+        if my_answer = Answer(Ok) && not (send_cmd fd (Packet s)) then
+          raise (Cannot_send (Packet s))
+        ;
       end
       | Receive(s) -> begin
         print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
-        ignore(send_cmd fd (Answer(Ok)));
-        match recv_cmd fd with
-        | Packet(s') -> begin
-          if s == s'
-          then ignore(send_cmd fd (Answer(Ok)))
-          else raise (Unexpected_request("Size inconsistancy between Receive and Packet commands."))
-        end
-        | answer -> raise (Unexpected_request(cmd_to_string answer))
+        let my_answer = (if max_packet_size <> 0 && s > max_packet_size
+                        then Answer(Read_big)
+                        else Answer(Ok)) in
+        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
+        if not (send_cmd fd my_answer) then
+          raise (Cannot_send my_answer)
+        ;
+        if my_answer = Answer(Ok) then
+          match recv_cmd fd max_packet_size with
+          | Packet(s') -> begin
+            if s == s'
+            then begin
+              if not (send_cmd fd (Answer(Ok))) then
+                raise (Cannot_send (Answer Ok))
+              ;
+            end else raise (Invalid_request("Size inconsistancy between Receive and Packet commands."))
+          end
+          | answer -> raise (Unexpected_request(answer))
+        ;
       end
       | Bye -> raise Exit
-      | answer -> raise (Unexpected_request(cmd_to_string answer))
+      | answer -> raise (Unexpected_request(answer))
     done
   with
   | Unix_error(ECONNRESET, _, _)
@@ -189,6 +237,17 @@ and server_run fd =
   end
   | Unix_error(e, _, _) -> begin
     print_error (sprintf "Unix error (%s)" (error_message e))
+  end
+  | Cannot_send(cmd) -> begin
+    print_error (sprintf "Unable to send command to the client: %s" (cmd_to_string cmd))
+  end
+  | Invalid_request(s) -> begin
+    print_error (sprintf "Request invalid (%s)" s);
+    ignore(send_cmd fd Bye)
+  end
+  | Unexpected_request(cmd) -> begin
+    print_error (sprintf "Request error (%s)" (cmd_to_string cmd));
+    ignore(send_cmd fd Bye)
   end
   | Exit -> ()
 ;;
