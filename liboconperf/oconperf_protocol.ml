@@ -57,7 +57,7 @@ and recv_cmd fd max_packet_size =
   let recv_body offset (cmd_num, data_len) =
     if max_read <> 0 && data_len > max_read then begin
       print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B" data_len));
-      Answer(Read_big)
+      Answer(Too_big)
     end else begin
       let r = recv_data fd offset data_len in
       print_debug_f (fun () -> (sprintf "recv_body: %s..."
@@ -102,7 +102,7 @@ let client_download fd size max_packet_size =
         let t2 = gettimeofday () in
         if size == size'
         then begin
-          print_message_f (fun () -> sprintf "I received %d data" size');
+          print_debug_f (fun () -> sprintf "I received %d data" size');
           (size, t2 -. t1, t1 -. t0)
         end else
           raise (Invalid_answer("Size inconsistancy between Receive and Packet commands."))
@@ -115,7 +115,7 @@ let client_download fd size max_packet_size =
     raise (Cannot_send(Send size))
   ;
 and client_upload fd size max_packet_size =
-  print_debug (Printf.sprintf "I send %d bytes to the server" size);
+  print_debug_f (fun () -> (Printf.sprintf "I send %d bytes to the server" size));
   let t0 = gettimeofday () in
   if send_cmd fd (Receive size) then
     match recv_cmd fd max_packet_size with
@@ -148,6 +148,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   and total_size = ref 0
   and total_time = ref 0.0
   and latencies = ref [] in
+  print_message "Please wait...";
   begin try
     while (gettimeofday ()) -. start_time < max_time do
       let (s, t, latency) = if test_upload
@@ -198,7 +199,7 @@ and server_run ?(max_packet_size=0) fd =
       | Send(s) -> begin
         print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
-                        then Answer(Read_big)
+                        then Answer(Too_big)
                         else Answer(Ok)) in
         print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         (* send acknowledgement then a Packet command *)
@@ -212,7 +213,7 @@ and server_run ?(max_packet_size=0) fd =
       | Receive(s) -> begin
         print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
-                        then Answer(Read_big)
+                        then Answer(Too_big)
                         else Answer(Ok)) in
         print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         if not (send_cmd fd my_answer) then

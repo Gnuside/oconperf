@@ -9,7 +9,7 @@ type error_t =
   | Parsing
   | Cmd
   | Read_failed
-  | Read_big
+  | Too_big
 
 type header_t = int * int
 
@@ -51,7 +51,7 @@ let err_to_string = function
   | Parsing -> "Parsing"
   | Cmd -> "Cmd"
   | Read_failed -> "Read_failed"
-  | Read_big -> "Read_big"
+  | Too_big -> "Too_big"
 ;;
 
 let cmd_to_string = function
@@ -85,14 +85,14 @@ and forge_err buffer offset =
   | '\x01' -> Parsing
   | '\x02' -> Cmd
   | '\x03' -> Read_failed
-  | '\x04' -> Read_big
+  | '\x04' -> Too_big
   | err -> raise (Exn_invalid_error_code(err))
 and unforge_err = function
   | Ok      -> Bytes.make 1 '\x00'
   | Parsing -> Bytes.make 1 '\x01'
   | Cmd     -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
-  | Read_big    -> Bytes.make 1 '\x04'
+  | Too_big    -> Bytes.make 1 '\x04'
 (* MD5 digests *)
 and forge_digest b =
   let buffer = bytes_to_hex b false in

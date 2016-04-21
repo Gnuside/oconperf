@@ -4,7 +4,7 @@ type error_t =
   | Parsing
   | Cmd
   | Read_failed
-  | Read_big
+  | Too_big
 
 type header_t = int * int (* command and data size *)
 
