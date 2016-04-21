@@ -1,5 +1,5 @@
 true: strict_sequence, annot, debug
-<src/lib> or <src>: include
+<liboconperf> or <src>: include
 <**/*.ml> or <**/*.mli> or <**/*.mlpack> or <**/*.ml.depends>: ocaml, package(core, unix, threads), thread
 <**/*.odoc>: ocaml, doc
 <**/*.{byte,cma}>: ocaml, byte, library, package(core, unix, threads), thread

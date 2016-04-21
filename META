@@ -1,0 +1,8 @@
+name = "oconperf"
+version = "0.0.1"
+description = "iperf OCaml"
+requires = "bytes core unix"
+archive(byte) = "liboconperf.cma"
+archive(byte, plugin) = "liboconperf.cma"
+archive(native) = "liboconperf.cmxa"
+archive(native, plugin) = "liboconperf.cmxs"
