@@ -3,7 +3,7 @@ name: "oconperf"
 version: "0.0.1"
 maintainer: "Roland Laurès <roland.laures@netcat.io>"
 authors: [
-  "Roland Laurès <roland.laures@netcat.io>",
+  "Roland Laurès <roland.laures@netcat.io>"
   "Jérôme Arzel <jerome.arzel@netcat.io>"
 ]
 homepage: "http://netcat.io"
@@ -13,7 +13,7 @@ dev-repo: "https://github.com/Gnuside/oconperf"
 build: [
   [make all]
 ]
-install: [make "install"]
+install: [make install_lib]
 remove: [make uninstall]
 depends: [
   "ocamlfind" {build}
