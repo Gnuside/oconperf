@@ -43,19 +43,23 @@ let show_bytes_str v =
 ;;
 
 let run () =
-  let s = connect_to !addr !port !socket_domain ~iface: !iface in
-  let (spd, lat) = (client_run s ~test_upload: !test_upload
-                                 ~max_time: (float_of_int !max_timeout)
-                                 ~max_size: !max_size
-                                 ~max_packet_size: !max_packet_size)
-  in match spd, lat with
-  | Some(speed), Some(latency) -> begin
-    print_endline (
-      if !quiet == false
-      then (sprintf "Download: %s ; Latency: %f s" (show_bytes_str speed) latency)
-      else (sprintf "%f\t%f" speed latency)
-    );
-    print_message "Client disconnected.";
-    0
+  try begin
+    let s = connect_to !addr !port !socket_domain ~iface: !iface in
+    let (spd, lat) = (client_run s ~test_upload: !test_upload
+                                   ~max_time: (float_of_int !max_timeout)
+                                   ~max_size: !max_size
+                                   ~max_packet_size: !max_packet_size)
+    in match spd, lat with
+    | Some(speed), Some(latency) -> begin
+      print_endline (
+        if !quiet == false
+        then (sprintf "Download: %s ; Latency: %f s" (show_bytes_str speed) latency)
+        else (sprintf "%f\t%f" speed latency)
+      );
+      print_message "Client disconnected.";
+      0
+    end
+    | _, _ -> print_error "Cannot compute speed and latency"; 1
+  end with e -> begin
+    print_error (sprintf "Unknown error (%s)" (Printexc.to_string e)); 1
   end
-  | _, _ -> print_error "Cannot compute speed and latency"; 1
