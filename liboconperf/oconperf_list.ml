@@ -1,4 +1,3 @@
-open Oconperf_configuration
 
 let average_l l =
   let len = List.length l in
