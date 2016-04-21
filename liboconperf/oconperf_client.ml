@@ -29,10 +29,10 @@ let bytes_unit_to_string = function
 | _ -> "Y"
 
 let show_bytes_human_readable a = function
-| 0. -> "0 B"
+| 0. -> "0 iB"
 | v -> begin
   let i = min (max (floor ((log v) /. (log a))) 0.) 8. in
-  sprintf "%.2f %sB / s" (v /. (a ** i)) (bytes_unit_to_string (int_of_float i))
+  sprintf "%.2f %siB / s" (v /. (a ** i)) (bytes_unit_to_string (int_of_float i))
 end
 
 let show_bytes_str v =
@@ -54,7 +54,7 @@ let run () =
       print_endline (
         if !quiet == false
         then (sprintf "Download: %s ; Latency: %f s" (show_bytes_str speed) latency)
-        else (sprintf "%f\t%f" speed latency)
+        else (sprintf "%s\t%f" (show_bytes_str speed) latency)
       );
       print_message "Client disconnected.";
       0
