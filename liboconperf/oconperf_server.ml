@@ -59,7 +59,7 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
         exit 1
       end
     end
-    | id -> close fd; ignore(Unix.waitpid [] id)
+    | id -> close fd; ignore(waitpid [] id)
   done;
   close s;
   0
