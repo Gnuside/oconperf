@@ -4,10 +4,11 @@ open Oconperf_pervasives
 open Printf
 open Unix
 
-let connect_to addr port socket_domain ~iface =
+let connect_to ~iface addr port =
+  let inet_addr = inet_addr_of_string addr in
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
-  let s = socket socket_domain SOCK_STREAM 0
-  and sa = ADDR_INET(inet_addr_of_string addr, port) in
+  let sa = ADDR_INET(inet_addr, port) in
+  let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
   begin
   match iface with
   | `Any -> () (* Any is the default behavior of socket,
@@ -35,26 +36,23 @@ let show_bytes_human_readable a = function
   sprintf "%.2f %siB / s" (v /. (a ** i)) (bytes_unit_to_string (int_of_float i))
 end
 
-let show_bytes_str v =
-  if !human_readable then
-    show_bytes_human_readable 1024. v
-  else
-    sprintf "%f" v
-;;
-
-let run () =
+let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ~iface addr port =
   try begin
-    let s = connect_to !addr !port !socket_domain ~iface: !iface in
-    let (spd, lat) = (client_run s ~test_upload: !test_upload
-                                   ~max_time: (float_of_int !max_timeout)
-                                   ~max_size: !max_size
-                                   ~max_packet_size: !max_packet_size)
+    let s = connect_to addr port ~iface: iface in
+    let (spd, lat) = (client_run s ~test_upload: test_upload
+                                   ~max_time: max_time
+                                   ~max_size: max_size
+                                   ~max_packet_size: max_packet_size)
     in match spd, lat with
     | Some(speed), Some(latency) -> begin
+      let speed_with_unit = if human_readable
+                            then show_bytes_human_readable 1024. speed
+                            else sprintf "%f" speed
+      in
       print_endline (
         if !quiet == false
-        then (sprintf "Download: %s ; Latency: %f s" (show_bytes_str speed) latency)
-        else (sprintf "%s\t%f" (show_bytes_str speed) latency)
+        then (sprintf "Download: %s ; Latency: %f s" speed_with_unit latency)
+        else (sprintf "%s\t%f" speed_with_unit latency)
       );
       print_message "Client disconnected.";
       0

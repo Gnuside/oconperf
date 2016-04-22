@@ -8,8 +8,6 @@ and version = "0.0.1"
 and usage = sprintf "\
 %s [client|server]\
 " Sys.argv.(0)
-and addr4 = ref ""
-and addr6 = ref ""
 and iface_name = ref ""
 
 let show_version () =
@@ -21,8 +19,7 @@ let args = ref [
   ("-q", Arg.Set(quiet), "\tRun in quiet and parseable mode");
   ("--debug", Arg.Set(debug), "\tRun in debug mode");
   ("-p", Arg.Set_int(port), "\tSet server port (to connect to ; on to listen to)");
-  ("-a4", Arg.Set_string(addr4), "\tSet server address (to connect to ; on to listen to)");
-  ("-a6", Arg.Set_string(addr6), "\tSet server address (to connect to ; on to listen to)");
+  ("-a", Arg.Set_string(addr), "\tSet server address (to connect to ; on to listen to)");
   ("-S", Arg.Set_int(max_packet_size), "\tSet maximum packet size");
 ]
 ;;
@@ -51,28 +48,29 @@ let anon_fun arg = match !Arg.current with
 
 Arg.parse_dynamic args anon_fun usage;;
 
-(* Select addr4 if addr6 not specified *)
-match !addr4, !addr6 with
- | "", "" -> addr := "127.0.0.1" ; socket_domain := Unix.PF_INET
- | _, ""  -> addr := !addr4 ; socket_domain := Unix.PF_INET
- | "", _  -> addr := !addr6 ; socket_domain := Unix.PF_INET6
- | _, _ -> failwith "Please specify only one IP address."
-;;
-
 iface := match !iface_name with
  | ""   -> `Any
  | name -> (`Interface_name name)
 ;;
 
 let _ =
-  exit
-  (Unix.handle_unix_error (
+  exit (
     match !running with
-     | Some(Server) -> Oconperf_server.run
-     | Some(Client) -> Oconperf_client.run
+     | Some(Server) -> Oconperf_server.run ~max_packet_size: !max_packet_size
+                                           ~max_pending_request: !mpc
+                                           !addr
+                                           !port
+     | Some(Client) -> Oconperf_client.run ~test_upload: !test_upload
+                                           ~human_readable: !human_readable
+                                           ~max_time: (float_of_int !max_timeout)
+                                           ~max_size: !max_size
+                                           ~max_packet_size: !max_packet_size
+                                           ~iface: !iface
+                                           !addr
+                                           !port
      | None -> (
          Arg.usage !args usage ;
          failwith "Please specify the action argument."
        )
-  ) ())
+  )
 ;;

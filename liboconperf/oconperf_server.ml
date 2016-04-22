@@ -1,14 +1,14 @@
-open Oconperf_configuration
 open Oconperf_protocol
 open Printf
 open Unix
 
-let start () =
-  let s = socket !socket_domain SOCK_STREAM 0
-  in
-    bind s (ADDR_INET(inet_addr_of_string !addr, !port)) ;
-    listen s !mpc ;
-    s
+let start ~max_pending_request addr port =
+  let inet_addr = inet_addr_of_string addr in
+  let sa = ADDR_INET(inet_addr, port) in
+  let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
+  bind s sa ;
+  listen s max_pending_request ;
+  s
 and close s =
   Unix.close s
 and shutdown fd =
@@ -40,10 +40,10 @@ let sigint_handle socket =
   exit 1
 ;;
 
-let run () =
-  print_endline (sprintf "Server (%s:%d)" !addr !port);
+let run ?(max_packet_size=0) ~max_pending_request addr port =
+  print_endline (sprintf "Server (%s:%d)" addr port);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-  let s = start () in
+  let s = start addr port ~max_pending_request: max_pending_request in
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun n -> sigint_handle s));
   while true do
     print_endline "waiting connections...";
@@ -53,7 +53,7 @@ let run () =
     | 0  -> begin
       if Unix.fork() <> 0 then exit 0;
       try
-        client_connection (fd, remote) ~max_packet_size: !max_packet_size; exit 0
+        client_connection (fd, remote) ~max_packet_size: max_packet_size; exit 0
       with _ -> begin
         client_disconnection (fd, remote);
         exit 1
