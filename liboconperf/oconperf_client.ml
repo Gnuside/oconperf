@@ -36,13 +36,22 @@ let show_bytes_human_readable a = function
   sprintf "%.2f %siB / s" (v /. (a ** i)) (bytes_unit_to_string (int_of_float i))
 end
 
+let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ~iface addr port =
+  let s = connect_to addr port ~iface: iface in
+  client_run s ~test_upload: test_upload
+               ~max_time: max_time
+               ~max_size: max_size
+               ~max_packet_size: max_packet_size
+
 let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ~iface addr port =
   try begin
-    let s = connect_to addr port ~iface: iface in
-    let (spd, lat) = (client_run s ~test_upload: test_upload
-                                   ~max_time: max_time
-                                   ~max_size: max_size
-                                   ~max_packet_size: max_packet_size)
+    let (spd, lat) = speed_test ~test_upload: test_upload
+                                ~max_time: max_time
+                                ~max_size: max_size
+                                ~max_packet_size: max_packet_size
+                                ~iface: iface
+                                addr
+                                port
     in match spd, lat with
     | Some(speed), Some(latency) -> begin
       let speed_with_unit = if human_readable
