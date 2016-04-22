@@ -65,7 +65,7 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
       in
       print_endline (
         if !quiet == false
-        then (sprintf "Download: %s ; Latency: %f s" speed_with_unit latency)
+        then (sprintf "Speed: %s ; Latency: %f s" speed_with_unit latency)
         else (sprintf "%s\t%f" speed_with_unit latency)
       );
       print_message "Client disconnected.";
