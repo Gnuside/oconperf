@@ -102,8 +102,9 @@ let client_download fd size max_packet_size =
         let t2 = gettimeofday () in
         if size == size'
         then begin
-          print_debug_f (fun () -> sprintf "I received %d data" size');
-          (size, t2 -. t1, t1 -. t0)
+          let packet_size = Oconperf_protocol_base.min_size + size in
+          print_debug_f (fun () -> sprintf "I received %d data" size);
+          (packet_size, t2 -. t1, t1 -. t0)
         end else
           raise (Invalid_answer("Size inconsistancy between Receive and Packet commands."))
         ;
@@ -124,9 +125,10 @@ and client_upload fd size max_packet_size =
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
       if send_cmd fd (Packet size) then
-        let t2 = gettimeofday () in
-        print_message_f (fun () -> sprintf "I sent %d data" size);
-        (size, t2 -. t1, t1 -. t0)
+        let t2 = gettimeofday ()
+        and packet_size = Oconperf_protocol_base.min_size + size in
+        print_debug_f (fun () -> sprintf "I sent %d data" size);
+        (packet_size, t2 -. t1, t1 -. t0)
       else
         raise (Cannot_send(Packet size))
       ;
