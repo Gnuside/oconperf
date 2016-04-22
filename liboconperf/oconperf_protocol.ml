@@ -9,7 +9,6 @@ open Unix;;
 
 Random.self_init ();
 
-exception Result of cmd_t;;
 exception Unexpected_answer of cmd_t;;
 exception Invalid_answer of string;;
 exception Unexpected_request of cmd_t;;

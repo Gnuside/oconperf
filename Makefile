@@ -4,25 +4,25 @@ PROGRAM=oconperf
 LIB_PROGRAM=liboconperf
 
 build_native:
-	ocamlbuild -use-ocamlfind $(PROGRAM).native
+	corebuild $(PROGRAM).native
 	ln -sf $(PROGRAM).native $(PROGRAM)
 
 build_byte:
-	ocamlbuild -use-ocamlfind $(PROGRAM).byte
+	corebuild $(PROGRAM).byte
 
 build_lib: build_native_lib build_byte_lib build_native_shared_lib
 
 build_native_lib:
-	ocamlbuild -use-ocamlfind $(LIB_PROGRAM).cmxa
+	corebuild $(LIB_PROGRAM).cmxa
 
 build_native_shared_lib:
-	ocamlbuild -use-ocamlfind $(LIB_PROGRAM).cmxs
+	corebuild $(LIB_PROGRAM).cmxs
 
 build_byte_lib:
-	ocamlbuild -use-ocamlfind $(LIB_PROGRAM).cma
+	corebuild $(LIB_PROGRAM).cma
 
 profile:
-	ocamlbuild -use-ocamlfind $(PROGRAM).p.native
+	corebuild $(PROGRAM).p.native
 
 all: build_native build_byte build_lib
 

@@ -44,7 +44,7 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
   print_endline (sprintf "Server (%s:%d)" addr port);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   let s = start addr port ~max_pending_request: max_pending_request in
-  Sys.set_signal Sys.sigint (Sys.Signal_handle (fun n -> sigint_handle s));
+  Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> sigint_handle s));
   while true do
     print_endline "waiting connections...";
     let (fd, remote) = accept s
