@@ -35,7 +35,7 @@ let rec recv_data fd offset min_read =
     r + (recv_data fd (offset + r) (min_read - r))
   end else begin
     print_debug_f (fun () -> "recv_data: wait and try again...");
-    Unix.sleep 1;
+    ignore (select [fd] [] [] (-1.));
     (* Try again *)
     recv_data fd offset min_read
   end
@@ -143,6 +143,11 @@ and client_upload fd size max_packet_size =
  *
  * On arrete l'envoi/reception une fois le temps écoulé  *)
 
+let in_time start_time max_time =
+  (gettimeofday ()) -. start_time < max_time
+and remaining_time max_time =
+  max_time -. (gettimeofday ())
+
 let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) fd =
   let size = ref 256
   and start_time = gettimeofday ()
@@ -151,27 +156,53 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   and latencies = ref [] in
   print_message "Please wait...";
   begin try
-    while (gettimeofday ()) -. start_time < max_time do
-      let (s, t, latency) = if test_upload
-                            then client_upload fd !size max_packet_size
-                            else client_download fd !size max_packet_size
-      and now = gettimeofday () in
-      (* Collect data *)
-      latencies := latency :: !latencies;
-      total_size := !total_size + s;
-      total_time := !total_time +. t;
-      (* Maximum total size limit *)
-      if max_size <> 0 && !total_size >= max_size then
-        raise Exit
-      ;
-      (* Increase size value *)
-      if (now -. start_time) *. 2. < max_time then
-        size := !size * 2
-      ;
-      (* Maximum packet size limit *)
-      if max_packet_size <> 0 && !size >= max_packet_size then
-        size := min !size max_packet_size
-      ;
+    while in_time start_time max_time do
+      let (read_fd, write_fd) = pipe () in
+      let input = Unix.in_channel_of_descr read_fd
+      and output = Unix.out_channel_of_descr write_fd
+      in
+      let _run_child () =
+        close read_fd;
+        let (s, t, latency) = if test_upload
+                              then client_upload fd !size max_packet_size
+                              else client_download fd !size max_packet_size
+        in
+        (* Send response to output *)
+        Marshal.to_channel output (s, t, latency) [Marshal.No_sharing];
+        flush output;
+        exit 0
+      and _run_parent pid =
+        close write_fd;
+        let collect_data (s, t, latency) =
+          let now = gettimeofday () in
+          (* Collect data *)
+          latencies := latency :: !latencies;
+          total_size := !total_size + s;
+          total_time := !total_time +. t;
+          (* Maximum total size limit *)
+          if max_size <> 0 && !total_size >= max_size then
+            raise Exit
+          ;
+          (* Increase size value *)
+          if (now -. start_time) *. 2. < max_time then
+            size := !size * 2
+          ;
+          (* Maximum packet size limit *)
+          if max_packet_size <> 0 && !size >= max_packet_size then
+            size := min !size max_packet_size
+          ;
+        in let wait_until_child_writes () =
+          if in_time start_time max_time then begin
+            (* FIXME: timeout imprecisions *)
+            ignore (select [read_fd] [] [] (remaining_time max_time));
+            collect_data (Marshal.from_channel input);
+            ignore (waitpid [] pid);
+          end; ()
+        in wait_until_child_writes ();
+        close read_fd
+      in match fork() with
+      | 0   -> _run_child ()
+      | pid -> _run_parent pid
     done;
     ignore(send_cmd fd Bye)
   with
