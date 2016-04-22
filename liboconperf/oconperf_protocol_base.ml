@@ -31,6 +31,8 @@ and err_values = [
   0x00 ; (* OK *)
   0x01 ; (* Parsing error *)
   0x02 ; (* Cmd error *)
+  0x03 ; (* Read failed error *)
+  0x04 ; (* Too big error *)
 ];;
 
 let is_valid_command_code b = List.exists (fun i -> i = b) cmd_values
@@ -93,13 +95,6 @@ and unforge_err = function
   | Cmd     -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
   | Too_big    -> Bytes.make 1 '\x04'
-(* MD5 digests *)
-and forge_digest b =
-  let buffer = bytes_to_hex b false in
-  (* print_debug buffer; *)
-  Digest.from_hex buffer
-and unforge_digest d =
-  Bytes.of_string d
 ;;
 
 (* command must be of the form :
