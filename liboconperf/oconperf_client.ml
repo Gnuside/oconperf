@@ -23,24 +23,6 @@ let connect_to ~iface ~max_time addr port =
   connect s sa;
   s
 
-let bytes_unit_to_string = function
-| 0 -> ""
-| 1 -> "K"
-| 2 -> "M"
-| 3 -> "G"
-| 4 -> "T"
-| 5 -> "P"
-| 6 -> "E"
-| 7 -> "Z"
-| _ -> "Y"
-
-let show_bytes_human_readable a = function
-| 0. -> "0 iB"
-| v -> begin
-  let i = min (max (floor ((log v) /. (log a))) 0.) 8. in
-  sprintf "%.2f %siB / s" (v /. (a ** i)) (bytes_unit_to_string (int_of_float i))
-end
-
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   let s = connect_to addr port ~iface: iface ~max_time: max_time in
   client_run s ~test_upload: test_upload
@@ -60,7 +42,7 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
     in match spd, lat with
     | Some(speed), Some(latency) -> begin
       let speed_with_unit = if human_readable
-                            then show_bytes_human_readable 1024. speed
+                            then show_bytes_human_readable Binary_power speed
                             else sprintf "%f" speed
       in
       print_endline (
