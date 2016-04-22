@@ -4,7 +4,7 @@ open Oconperf_pervasives
 open Printf
 open Unix
 
-let connect_to ~iface addr port =
+let connect_to ~iface ~max_time addr port =
   let inet_addr = inet_addr_of_string addr in
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
   let sa = ADDR_INET(inet_addr, port) in
@@ -14,6 +14,11 @@ let connect_to ~iface addr port =
   | `Any -> () (* Any is the default behavior of socket,
                   and bind_to_interface needs root perms *)
   | _    -> Core.Std.Or_error.ok_exn Core.Linux_ext.bind_to_interface s iface
+  end;
+  (* Set timeout *)
+  if max_time <> 0.0 then begin
+    setsockopt_float s SO_RCVTIMEO max_time;
+    setsockopt_float s SO_SNDTIMEO max_time
   end;
   connect s sa;
   s
@@ -37,7 +42,7 @@ let show_bytes_human_readable a = function
 end
 
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
-  let s = connect_to addr port ~iface: iface in
+  let s = connect_to addr port ~iface: iface ~max_time: max_time in
   client_run s ~test_upload: test_upload
                ~max_time: max_time
                ~max_size: max_size
