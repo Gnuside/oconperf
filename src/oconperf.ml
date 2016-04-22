@@ -54,7 +54,7 @@ iface := match !iface_name with
 ;;
 
 let _ =
-  exit (
+  exit (Unix.handle_unix_error (fun () -> begin
     match !running with
      | Some(Server) -> Oconperf_server.run ~max_packet_size: !max_packet_size
                                            ~max_pending_request: !mpc
@@ -72,5 +72,5 @@ let _ =
          Arg.usage !args usage ;
          failwith "Please specify the action argument."
        )
-  )
+  end) ())
 ;;
