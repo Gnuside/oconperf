@@ -30,7 +30,7 @@ Credits
 
 ![netcat\_](netcat-logo-256.png)
 
-Got questions? Need help? Tweet at [@glenux](http://twitter.com/glenux) or [@shamox](http://twitter.com/shamox)
+Got questions? Need help? Tweet at [@glenux](http://twitter.com/glenux) or [@rlaures](http://twitter.com/shamox)
 
 
 License
