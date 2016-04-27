@@ -26,8 +26,11 @@ build_byte_lib:
 profile:
 	corebuild $(PROGRAM).p.native
 
-docker:
+docker_build:
 	docker build -t oconperf-server .
+
+docker_run:
+	docker run --detach=false -it oconperf-server
 
 clean:
 	ocamlbuild -clean
