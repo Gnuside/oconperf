@@ -12,13 +12,17 @@ RUN opam init && \
 	opam config setup -a
 
 RUN eval $(opam config env) && \
-	opam install -y core
+	opam switch 4.02.3
+
+RUN eval $(opam config env) && \
+	opam install -y core base-bytes
 
 ADD . /usr/src/oconperf
 
 WORKDIR /usr/src/oconperf
 
 RUN eval $(opam config env) && \
+	make clean && \
 	make
 
 EXPOSE 80

@@ -31,7 +31,7 @@ docker:
 
 clean:
 	ocamlbuild -clean
-	rm -f $(PROGRAM)
+	rm -f $(PROGRAM) $(PROGRAM).native $(PROGRAM).byte
 
 install: build_native build_byte
 	ocamlfind install $(PROGRAM) META \
