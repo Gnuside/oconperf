@@ -25,11 +25,12 @@ RUN eval $(opam config env) && \
 	make clean && \
 	make
 
-RUN cp /usr/src/oconperf/oconperf /usr/local/bin/oconperf
+RUN cp /usr/src/oconperf/oconperf.native /usr/local/bin/oconperf
 
 RUN rm -fr /usr/src/oconperf
 
 RUN apt-get autoremove -y
 
 EXPOSE 4217
-CMD /usr/src/oconperf/oconperf
+CMD /usr/local/bin/oconperf server
+
