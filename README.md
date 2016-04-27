@@ -28,7 +28,7 @@ Run
 Credits
 -------
 
-<!-- ![Gnuside](http://www.gnuside.com/wp-content/themes/gnuside-ignition-0.2-1-g0d0a5ed/images/logo-whitebg-128.png) -->
+![netcat\_](netcat-logo-256.png)
 
 Got questions? Need help? Tweet at [@glenux](http://twitter.com/glenux) or [@shamox](http://twitter.com/shamox)
 
@@ -36,7 +36,7 @@ Got questions? Need help? Tweet at [@glenux](http://twitter.com/glenux) or [@sha
 License
 -------
 
-Debian-Repository for Docker is Copyright © 2014 Glenn Y. Rolland.
+Oconperf is Copyright © 2016 netcat\_
 
 It is free software, and may be redistributed under the terms specified in the LICENSE file.
 
