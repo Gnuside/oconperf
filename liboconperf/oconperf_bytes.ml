@@ -25,3 +25,4 @@ let random_fill bytes len random_buffer random_buffer_size =
 
 let create_random_bytes size =
   Bytes.init size (fun _ -> char_of_int (Random.int 256))
+

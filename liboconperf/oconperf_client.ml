@@ -6,7 +6,6 @@ open Unix
 open Core
 
 let connect_to ~iface ~max_time addr port =
-(*   let inet_addr = inet_addr_of_string addr in *)
   let inet_addr = 
     gethostbyname addr 
     |> fun x -> x.h_addr_list.(0)
@@ -29,12 +28,14 @@ let connect_to ~iface ~max_time addr port =
   connect s sa;
   s
 
+
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   let s = connect_to addr port ~iface: iface ~max_time: max_time in
   client_run s ~test_upload: test_upload
                ~max_time: max_time
                ~max_size: max_size
                ~max_packet_size: max_packet_size
+
 
 let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   try begin
