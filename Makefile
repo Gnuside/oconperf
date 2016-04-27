@@ -3,7 +3,7 @@ include $(shell ocamlc -where)/Makefile.config
 PROGRAM=oconperf
 LIB_PROGRAM=liboconperf
 
-all: build_native build_byte build_lib build_docker
+all: build_native build_byte build_lib
 
 build_native:
 	corebuild $(PROGRAM).native
@@ -26,7 +26,7 @@ build_byte_lib:
 profile:
 	corebuild $(PROGRAM).p.native
 
-build_docker:
+docker:
 	docker build -t oconperf-server .
 
 clean:
