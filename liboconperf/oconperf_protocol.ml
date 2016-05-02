@@ -2,6 +2,7 @@ open Oconperf_protocol_base
 open Oconperf_pervasives
 open Oconperf_list
 open Oconperf_bytes
+open Oconperf_unix
 open Printf
 open Unix;;
 (* Client connects, then ask server to send (Send) to the client data
@@ -156,13 +157,11 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   and latencies = ref [] in
   print_message "Please wait...";
   begin try
-    while in_time start_time max_time do
-      let (read_fd, write_fd) = pipe () in
-      let input = Unix.in_channel_of_descr read_fd
-      and output = Unix.out_channel_of_descr write_fd
-      in
-      let _run_child () =
-        close read_fd;
+    let (read_fd, write_fd) = pipe () in
+    let input = Unix.in_channel_of_descr read_fd
+    and output = Unix.out_channel_of_descr write_fd in
+    let rec test_speed () =
+      if in_time start_time max_time then
         let (s, t, latency) = if test_upload
                               then client_upload fd !size max_packet_size
                               else client_download fd !size max_packet_size
@@ -170,40 +169,47 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         (* Send response to output *)
         Marshal.to_channel output (s, t, latency) [Marshal.No_sharing];
         flush output;
-        exit 0
-      and _run_parent pid =
-        close write_fd;
-        let collect_data (s, t, latency) =
-          let now = gettimeofday () in
-          (* Collect data *)
-          latencies := latency :: !latencies;
-          total_size := !total_size + s;
-          total_time := !total_time +. t;
-          (* Maximum total size limit *)
-          if max_size <> 0 && !total_size >= max_size then
-            raise Exit
+        let now = gettimeofday () in
+        (* Maximum total size limit *)
+        if max_size <> 0 && !total_size >= max_size then
+          exit 0
+        ;
+        (* Increase size value *)
+        if (now -. start_time) *. 2. < max_time then
+          size := !size * 2
+        ;
+        (* Maximum packet size limit *)
+        if max_packet_size <> 0 && !size > max_packet_size then
+          size := max_packet_size
+        ;
+        test_speed ()
+      ;
+    in let _run_child () =
+      close read_fd;
+      test_speed ();
+      exit 0
+    and _run_parent pid =
+      close write_fd;
+      let collect_data (s, t, latency) =
+        (* Collect data *)
+        latencies := latency :: !latencies;
+        total_size := !total_size + s;
+        total_time := !total_time +. t;
+      in let rec wait_until_child_writes () =
+        if in_time start_time max_time then begin
+          (* FIXME: timeout imprecisions *)
+          ignore (select [read_fd] [] [] (remaining_time max_time));
+          collect_data (Marshal.from_channel input);
+          if not (pidended pid) then
+            wait_until_child_writes ()
           ;
-          (* Increase size value *)
-          if (now -. start_time) *. 2. < max_time then
-            size := !size * 2
-          ;
-          (* Maximum packet size limit *)
-          if max_packet_size <> 0 && !size >= max_packet_size then
-            size := min !size max_packet_size
-          ;
-        in let wait_until_child_writes () =
-          if in_time start_time max_time then begin
-            (* FIXME: timeout imprecisions *)
-            ignore (select [read_fd] [] [] (remaining_time max_time));
-            collect_data (Marshal.from_channel input);
-            ignore (waitpid [] pid);
-          end; ()
-        in wait_until_child_writes ();
-        close read_fd
-      in match fork() with
-      | 0   -> _run_child ()
-      | pid -> _run_parent pid
-    done;
+        end; ()
+      in wait_until_child_writes ();
+      close read_fd
+    in begin match fork() with
+    | 0   -> _run_child ()
+    | pid -> _run_parent pid
+    end;
     ignore(send_cmd fd Bye)
   with
   | Unix_error(e, _, _) -> begin
