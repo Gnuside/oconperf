@@ -3,9 +3,14 @@ open Oconperf_protocol
 open Oconperf_pervasives
 open Printf
 open Unix
+open Core
 
 let connect_to ~iface ~max_time addr port =
-  let inet_addr = inet_addr_of_string addr in
+  let inet_addr = 
+    gethostbyname addr 
+    |> fun x -> x.h_addr_list.(0)
+  in
+
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
   let sa = ADDR_INET(inet_addr, port) in
   let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
@@ -23,6 +28,7 @@ let connect_to ~iface ~max_time addr port =
   connect s sa;
   s
 
+
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   let s = connect_to addr port ~iface: iface ~max_time: max_time in
   client_run s ~test_upload: test_upload
@@ -30,20 +36,25 @@ let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
                ~max_size: max_size
                ~max_packet_size: max_packet_size
 
+
 let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   try begin
-    let (spd, lat) = speed_test ~test_upload: test_upload
-                                ~max_time: max_time
-                                ~max_size: max_size
-                                ~max_packet_size: max_packet_size
-                                ~iface: iface
-                                addr
-                                port
-    in match spd, lat with
+    let (spd, lat) = 
+      speed_test ~test_upload: test_upload
+        ~max_time: max_time
+        ~max_size: max_size
+        ~max_packet_size: max_packet_size
+        ~iface: iface
+        addr
+        port
+    in 
+    
+    match spd, lat with
     | Some(speed), Some(latency) -> begin
-      let speed_with_unit = if human_readable
-                            then show_bytes_human_readable Binary_power speed
-                            else sprintf "%f" speed
+      let speed_with_unit = 
+        if human_readable
+        then show_bytes_human_readable Binary_power speed
+        else sprintf "%f" speed
       in
       print_endline (
         if !quiet == false
@@ -57,3 +68,4 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
   end with e -> begin
     print_error (sprintf "Unknown error (%s)" (Printexc.to_string e)); 1
   end
+

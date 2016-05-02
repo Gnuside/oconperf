@@ -1,9 +1,16 @@
 open Oconperf_protocol
 open Printf
 open Unix
+open Core
 
+(**
+ * Start server on given address/port
+ *)
 let start ~max_pending_request addr port =
-  let inet_addr = inet_addr_of_string addr in
+  let inet_addr = 
+    gethostbyname addr 
+    |> fun x -> x.h_addr_list.(0)
+  in
   let sa = ADDR_INET(inet_addr, port) in
   let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
   bind s sa ;
