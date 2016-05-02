@@ -46,5 +46,9 @@ let show_bytes_human_readable a = function
 | v -> begin
   let a' = byte_power a in
   let i = min (max (floor ((log v) /. (log a'))) 0.) 8. in
-  Printf.sprintf "%.2f %siB / s" (v /. (a' ** i)) (bytes_unit_to_string (int_of_float i))
+  let v' = (v /. (a' ** i)) in
+  if i = 0. then
+    Printf.sprintf "%d iB / s" (int_of_float v')
+  else
+    Printf.sprintf "%.2f %siB / s" v' (bytes_unit_to_string (int_of_float i))
 end

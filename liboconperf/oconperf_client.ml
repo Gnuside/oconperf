@@ -6,8 +6,8 @@ open Unix
 open Core
 
 let connect_to ~iface ~max_time addr port =
-  let inet_addr = 
-    gethostbyname addr 
+  let inet_addr =
+    gethostbyname addr
     |> fun x -> x.h_addr_list.(0)
   in
 
@@ -39,7 +39,7 @@ let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
 
 let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   try begin
-    let (spd, lat) = 
+    let (spd, lat) =
       speed_test ~test_upload: test_upload
         ~max_time: max_time
         ~max_size: max_size
@@ -47,18 +47,23 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
         ~iface: iface
         addr
         port
-    in 
-    
+    in
+
     match spd, lat with
     | Some(speed), Some(latency) -> begin
-      let speed_with_unit = 
+      let speed_with_unit =
         if human_readable
         then show_bytes_human_readable Binary_power speed
-        else sprintf "%f" speed
+        else sprintf "%d" (int_of_float speed)
+      in let speed_with_unit_always =
+        let out = speed_with_unit in
+        if human_readable
+        then out
+        else sprintf "%s iB / s" out
       in
       print_endline (
         if !quiet == false
-        then (sprintf "Speed: %s ; Latency: %f s" speed_with_unit latency)
+        then (sprintf "Speed: %s ; Latency: %f s" speed_with_unit_always latency)
         else (sprintf "%s\t%f" speed_with_unit latency)
       );
       print_message "Client disconnected.";
@@ -68,4 +73,3 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
   end with e -> begin
     print_error (sprintf "Unknown error (%s)" (Printexc.to_string e)); 1
   end
-
