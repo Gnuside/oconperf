@@ -7,13 +7,14 @@ open Core
  * Start server on given address/port
  *)
 let start ~max_pending_request addr port =
-  let inet_addr = 
-    gethostbyname addr 
-    |> fun x -> x.h_addr_list.(0)
+  let addr_info = 
+    getaddrinfo addr (string_of_int port) [AI_SOCKTYPE SOCK_STREAM]
+    |> function
+        | x::tl -> x
+        | [] -> failwith (Printf.sprintf "unable to resove %s" addr)
   in
-  let sa = ADDR_INET(inet_addr, port) in
-  let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
-  bind s sa ;
+  let s = socket addr_info.ai_family SOCK_STREAM 0 in
+  bind s addr_info.ai_addr ;
   listen s max_pending_request ;
   s
 and close s =
