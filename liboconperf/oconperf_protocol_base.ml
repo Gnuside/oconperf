@@ -50,19 +50,19 @@ exception Exn_uncoherent_cmd of string * bytes
 exception Exn_read_more of bytes * int (* (buf,r) : read r more bytes for buf to be complete *)
 
 let err_to_string = function
-  | Ok -> "Ok"
-  | Parsing -> "Parsing"
-  | Cmd -> "Cmd"
+  | Ok          -> "Ok"
+  | Parsing     -> "Parsing"
+  | Cmd         -> "Cmd"
   | Read_failed -> "Read_failed"
-  | Too_big -> "Too_big"
+  | Too_big     -> "Too_big"
 
 
 let cmd_to_string = function
-  | Send(l) -> sprintf "Send(%d)" l
-  | Receive(l) -> sprintf "Receive(%d)" l
+  | Send(l)     -> sprintf "Send(%d)" l
+  | Receive(l)  -> sprintf "Receive(%d)" l
   | Answer(err) -> sprintf "Answer(%s)" (err_to_string err)
   | Packet(len) -> sprintf "Packet(%d)" len
-  | Bye -> "Bye"
+  | Bye         -> "Bye"
 
 
 (* forge : get ocaml value from bytes stream
@@ -89,13 +89,13 @@ and forge_err buffer offset =
   | '\x02' -> Cmd
   | '\x03' -> Read_failed
   | '\x04' -> Too_big
-  | err -> raise (Exn_invalid_error_code(err))
+  | err    -> raise (Exn_invalid_error_code(err))
 and unforge_err = function
-  | Ok      -> Bytes.make 1 '\x00'
-  | Parsing -> Bytes.make 1 '\x01'
-  | Cmd     -> Bytes.make 1 '\x02'
+  | Ok          -> Bytes.make 1 '\x00'
+  | Parsing     -> Bytes.make 1 '\x01'
+  | Cmd         -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
-  | Too_big    -> Bytes.make 1 '\x04'
+  | Too_big     -> Bytes.make 1 '\x04'
 
 
 (* command must be of the form :

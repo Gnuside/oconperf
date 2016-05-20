@@ -184,7 +184,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         ;
         test_speed ()
       ;
-    in let _run_child () =
+    in 
+    let _run_child () =
       close read_fd;
       test_speed ();
       exit 0
@@ -195,7 +196,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         latencies := latency :: !latencies;
         total_size := !total_size + s;
         total_time := !total_time +. t;
-      in let rec wait_until_child_writes () =
+      in 
+      let rec wait_until_child_writes () =
         if in_time start_time max_time then begin
           (* FIXME: timeout imprecisions *)
           ignore (select [read_fd] [] [] (remaining_time max_time));
@@ -204,8 +206,12 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
             wait_until_child_writes ()
           ;
         end; ()
-      in wait_until_child_writes ();
-      close read_fd
+      in 
+      wait_until_child_writes ();
+      close read_fd ;
+      ignore @@ pidended pid
+
+
     in begin match fork() with
     | 0   -> _run_child ()
     | pid -> _run_parent pid
@@ -229,7 +235,9 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   end
   end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
-and server_run ?(max_packet_size=0) fd =
+
+
+let server_run ?(max_packet_size=0) fd =
   try
     while true do
       print_message "Wait for client request...";
@@ -293,4 +301,4 @@ and server_run ?(max_packet_size=0) fd =
     ignore(send_cmd fd Bye)
   end
   | Exit -> ()
-;;
+
