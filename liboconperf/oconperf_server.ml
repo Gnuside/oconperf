@@ -58,15 +58,17 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
     let (fd, remote) = accept s
     in
     match fork() with
-    | 0  -> begin
-      if Unix.fork() <> 0 then exit 0;
-      try
-        client_connection (fd, remote) ~max_packet_size: max_packet_size; exit 0
-      with _ -> begin
-        client_disconnection (fd, remote);
-        exit 1
+    | 0  -> 
+      begin
+        if Unix.fork() <> 0 then exit 0;
+        try
+          client_connection (fd, remote) ~max_packet_size: max_packet_size; exit 0
+        with _ -> 
+          begin
+            client_disconnection (fd, remote);
+            exit 1
+          end
       end
-    end
     | id -> close fd; ignore(waitpid [] id)
   done;
   close s;
