@@ -7,8 +7,8 @@ open Core
  * Start server on given address/port
  *)
 let start ~max_pending_request addr port =
-  let inet_addr = 
-    gethostbyname addr 
+  let inet_addr =
+    gethostbyname addr
     |> fun x -> x.h_addr_list.(0)
   in
   let sa = ADDR_INET(inet_addr, port) in
@@ -16,10 +16,8 @@ let start ~max_pending_request addr port =
   bind s sa ;
   listen s max_pending_request ;
   s
-and close s =
+and stop s =
   Unix.close s
-and shutdown fd =
-  Unix.shutdown fd SHUTDOWN_ALL
 ;;
 
 let string_of_sockaddr sa =
@@ -30,7 +28,7 @@ let string_of_sockaddr sa =
 
 let client_disconnection (fd, remote) =
   print_endline (sprintf "  Client %s leaving..." (string_of_sockaddr remote));
-  shutdown fd;
+  stop fd;
   ()
 ;;
 
@@ -68,5 +66,5 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
     end
     | id -> close fd; ignore(waitpid [] id)
   done;
-  close s;
+  stop s;
   0
