@@ -196,11 +196,14 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         total_size := !total_size + s;
         total_time := !total_time +. t;
       in let rec wait_until_child_writes () =
-        if in_time start_time max_time then begin
+        (* Always do a waitpid (nohang) at first *)
+        if (not (pidended pid)) && (in_time start_time max_time) then begin
           (* FIXME: timeout imprecisions *)
-          ignore (select [read_fd] [] [] (remaining_time max_time));
-          collect_data (Marshal.from_channel input);
-          if not (pidended pid) then
+          begin match (select [read_fd] [] [] (remaining_time max_time)) with
+           | [], [], [] -> () (* Nothing to read *)
+           | _ , _ , _  -> collect_data (Marshal.from_channel input)
+          end ;
+          if not (pidended pid) then (* This is a waitpid (nohang) *)
             wait_until_child_writes ()
           ;
         end; ()
