@@ -208,6 +208,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
           ;
         end; ()
       in wait_until_child_writes ();
+      ignore(waitpid [] pid);
       close read_fd
     in begin match fork() with
     | 0   -> _run_child ()
