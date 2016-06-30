@@ -27,7 +27,7 @@ let rec recv_data fd offset min_read =
     rbuf := Bytes.extend !rbuf 0 (nbuf_size - !rbuf_size);
     rbuf_size := nbuf_size;
     print_debug_f (fun () -> (sprintf "reallocate buffer: %d" nbuf_size));
-  end;
+  end ;
   let r = read fd !rbuf offset min_read in
   if r >= min_read then begin
     r
@@ -40,7 +40,6 @@ let rec recv_data fd offset min_read =
     (* Try again *)
     recv_data fd offset min_read
   end
-;;
 
 let send_cmd fd cmd =
   let cmd_b = to_bytes cmd in
@@ -77,7 +76,7 @@ and recv_cmd fd max_packet_size =
     let r = recv_data fd 0 Oconperf_protocol_base.min_size in
     print_debug_f (fun () -> (sprintf "recv_header: %s" (bytes_to_hex
       (Bytes.sub !rbuf 0 r)
-      true)));
+      true))) ;
     match of_bytes_header !rbuf 0 r with
     | Some(cmd_num, data_len) -> begin
       recv_body r (cmd_num, data_len)
@@ -86,7 +85,6 @@ and recv_cmd fd max_packet_size =
       failwith "recv_header: There wasn't enough bytes asked, this should not happen"
     end
   in recv_header ()
-;;
 
 let client_download fd size max_packet_size =
   print_debug (sprintf "Server, please send %d bytes" size);
@@ -100,44 +98,40 @@ let client_download fd size max_packet_size =
       match recv_cmd fd max_packet_size with
       | Packet(size') -> begin
         let t2 = gettimeofday () in
-        if size == size'
-        then begin
+        if size == size' then begin
           let packet_size = Oconperf_protocol_base.min_size + size in
           print_debug_f (fun () -> sprintf "I received %d data" size);
           (packet_size, t2 -. t1, t1 -. t0)
         end else
           raise (Invalid_answer("Size inconsistancy between Receive and Packet commands."))
-        ;
       end
       | answer -> raise (Unexpected_answer(answer))
     end
     | answer -> raise (Unexpected_answer(answer))
   else
     raise (Cannot_send(Send size))
-  ;
+
 and client_upload fd size max_packet_size =
   print_debug_f (fun () -> (Printf.sprintf "I send %d bytes to the server" size));
   let t0 = gettimeofday () in
-  if send_cmd fd (Receive size) then
+  if send_cmd fd (Receive size) then begin
     match recv_cmd fd max_packet_size with
     | Answer(Ok) -> begin
       let t1 = gettimeofday () in
       (* print_debug "Server say OK"; *)
       (* Then we continue *)
-      if send_cmd fd (Packet size) then
+      if send_cmd fd (Packet size) then begin
         let t2 = gettimeofday ()
         and packet_size = Oconperf_protocol_base.min_size + size in
         print_debug_f (fun () -> sprintf "I sent %d data" size);
         (packet_size, t2 -. t1, t1 -. t0)
-      else
+      end else
         raise (Cannot_send(Packet size))
       ;
     end
     | answer -> raise (Unexpected_answer(answer))
-  else
+  end else
     raise (Cannot_send(Receive size))
-  ;
-;;
 
 (* Tant qu'on est en dessous de la moitié du max time, on fait grossir
  * la taille des paquets, ensuite on arrete de les faire grossir
@@ -161,7 +155,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
     let input = Unix.in_channel_of_descr read_fd
     and output = Unix.out_channel_of_descr write_fd in
     let rec test_speed () =
-      if in_time start_time max_time then
+      if in_time start_time max_time then begin
         let (s, t, latency) = if test_upload
                               then client_upload fd !size max_packet_size
                               else client_download fd !size max_packet_size
@@ -183,7 +177,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
           size := max_packet_size
         ;
         test_speed ()
-      ;
+      end
     in
     let _run_child () =
       close read_fd;
@@ -207,7 +201,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
           if not (pidended pid) then (* This is a waitpid (nohang) *)
             wait_until_child_writes ()
           ;
-        end; ()
+        end
       in wait_until_child_writes ();
       close read_fd ;
       ignore @@ waitpid [] pid
@@ -215,8 +209,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
     in begin match fork() with
     | 0   -> _run_child ()
     | pid -> _run_parent pid
-    end;
-    ignore(send_cmd fd Bye)
+    end ;
+    ignore @@ send_cmd fd Bye
   with
   | Unix_error(e, _, _) -> begin
     print_error (sprintf "Unix error (%s)" (error_message e))
@@ -233,7 +227,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   | Exit -> begin
     print_error "Exit..."
   end
-  end;
+  end ;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
 
 let server_run ?(max_packet_size=0) fd =
@@ -265,19 +259,17 @@ let server_run ?(max_packet_size=0) fd =
         if not (send_cmd fd my_answer) then
           raise (Cannot_send my_answer)
         ;
-        if my_answer = Answer(Ok) then
+        if my_answer = Answer(Ok) then begin
           ignore (select [fd] [] [] (-1.)) ;
           match recv_cmd fd max_packet_size with
           | Packet(s') -> begin
-            if s == s'
-            then begin
-              if not (send_cmd fd (Answer(Ok))) then
-                raise (Cannot_send (Answer Ok))
-              ;
-            end else raise (Invalid_request("Size inconsistancy between Receive and Packet commands."))
+            if s == s' then begin
+              if not (send_cmd fd (Answer(Ok))) then raise (Cannot_send (Answer Ok))
+            end else
+              raise (Invalid_request("Size inconsistancy between Receive and Packet commands."))
           end
           | answer -> raise (Unexpected_request(answer))
-        ;
+        end
       end
       | Bye -> raise Exit
       | answer -> raise (Unexpected_request(answer))
