@@ -6,12 +6,7 @@ open Unix
 open Core
 
 let connect_to ~iface ~max_time addr port =
-  let addr_info =
-    getaddrinfo addr (string_of_int port) [AI_SOCKTYPE SOCK_STREAM]
-    |> function
-        | x::tl -> x
-        | [] -> failwith (Printf.sprintf "unable to resove %s" addr)
-  in
+  let addr_info = Oconperf_unix.addr_info addr port in
 
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
   let s = socket addr_info.ai_family SOCK_STREAM 0 in
