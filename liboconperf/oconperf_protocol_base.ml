@@ -27,19 +27,20 @@ let cmd_values = [
   0x04 ; (* Answer *)
   0xFF ; (* Bye *)
 ]
+(*
 and err_values = [
   0x00 ; (* OK *)
   0x01 ; (* Parsing error *)
   0x02 ; (* Cmd error *)
   0x03 ; (* Read failed error *)
   0x04 ; (* Too big error *)
-];;
+] *)
 
 let is_valid_command_code b = List.exists (fun i -> i = b) cmd_values
-and min_size = 1 + 4;;
+and min_size = 1 + 4
 
-let random_buffer_size = 2*1024*1024;;
-let random_buffer = create_random_bytes random_buffer_size;;
+let random_buffer_size = 2*1024*1024
+let random_buffer = create_random_bytes random_buffer_size
 
 exception Exn_invalid_command of int
 exception Exn_invalid_error_code of char
@@ -49,20 +50,20 @@ exception Exn_uncoherent_cmd of string * bytes
 exception Exn_read_more of bytes * int (* (buf,r) : read r more bytes for buf to be complete *)
 
 let err_to_string = function
-  | Ok -> "Ok"
-  | Parsing -> "Parsing"
-  | Cmd -> "Cmd"
+  | Ok          -> "Ok"
+  | Parsing     -> "Parsing"
+  | Cmd         -> "Cmd"
   | Read_failed -> "Read_failed"
-  | Too_big -> "Too_big"
-;;
+  | Too_big     -> "Too_big"
+
 
 let cmd_to_string = function
-  | Send(l) -> sprintf "Send(%d)" l
-  | Receive(l) -> sprintf "Receive(%d)" l
+  | Send(l)     -> sprintf "Send(%d)" l
+  | Receive(l)  -> sprintf "Receive(%d)" l
   | Answer(err) -> sprintf "Answer(%s)" (err_to_string err)
   | Packet(len) -> sprintf "Packet(%d)" len
-  | Bye -> "Bye"
-;;
+  | Bye         -> "Bye"
+
 
 (* forge : get ocaml value from bytes stream
  * unforge : put ocaml value into bytes stream
@@ -88,14 +89,14 @@ and forge_err buffer offset =
   | '\x02' -> Cmd
   | '\x03' -> Read_failed
   | '\x04' -> Too_big
-  | err -> raise (Exn_invalid_error_code(err))
+  | err    -> raise (Exn_invalid_error_code(err))
 and unforge_err = function
-  | Ok      -> Bytes.make 1 '\x00'
-  | Parsing -> Bytes.make 1 '\x01'
-  | Cmd     -> Bytes.make 1 '\x02'
+  | Ok          -> Bytes.make 1 '\x00'
+  | Parsing     -> Bytes.make 1 '\x01'
+  | Cmd         -> Bytes.make 1 '\x02'
   | Read_failed -> Bytes.make 1 '\x03'
-  | Too_big    -> Bytes.make 1 '\x04'
-;;
+  | Too_big     -> Bytes.make 1 '\x04'
+
 
 (* command must be of the form :
   * <code:1> <length:4> <data:length> <digest:16>
@@ -167,7 +168,7 @@ and unforge_cmd = function
       (unforge_uint32 0)
     )
   end
-;;
+
 
 let of_bytes_header buffer offset buf_len =
   let header_size = min_size
@@ -179,16 +180,15 @@ let of_bytes_header buffer offset buf_len =
     and data_len = forge_uint32 buffer (offset + 1) in
     Some (cmd, data_len)
   end
-;;
+
 
 let of_bytes_body buffer offset buf_len (cmd, data_len) =
   let len = buf_len - offset in
-  if len < data_len then
+  begin if len < data_len then
     None
   else
     Some (forge_cmd cmd buffer offset data_len)
-  ;
-;;
+  end
 
 let of_bytes buffer offset buf_len =
   let header_size = min_size
@@ -199,7 +199,7 @@ let of_bytes buffer offset buf_len =
     in (opt, data_len - len)
   end
   | None -> (None, header_size - len)
-;;
+
 
 let to_bytes cmd = unforge_cmd cmd
-;;
+
