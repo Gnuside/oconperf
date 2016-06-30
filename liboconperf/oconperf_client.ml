@@ -6,16 +6,16 @@ open Unix
 open Core
 
 let connect_to ~iface ~max_time addr port =
-  let inet_addr =
-    gethostbyname addr
-    |> fun x -> x.h_addr_list.(0)
+  let addr_info =
+    getaddrinfo addr (string_of_int port) [AI_SOCKTYPE SOCK_STREAM]
+    |> function
+        | x::tl -> x
+        | [] -> failwith (Printf.sprintf "unable to resove %s" addr)
   in
 
   print_message_f (fun () -> (sprintf "Client connects to %s:%d" addr port));
-  let sa = ADDR_INET(inet_addr, port) in
-  let s = socket (domain_of_sockaddr sa) SOCK_STREAM 0 in
-  begin
-  match iface with
+  let s = socket addr_info.ai_family SOCK_STREAM 0 in
+  begin match iface with
   | `Any -> () (* Any is the default behavior of socket,
                   and bind_to_interface needs root perms *)
   | _    -> Core.Std.Or_error.ok_exn Core.Linux_ext.bind_to_interface s iface
@@ -25,7 +25,7 @@ let connect_to ~iface ~max_time addr port =
     setsockopt_float s SO_RCVTIMEO max_time;
     setsockopt_float s SO_SNDTIMEO max_time
   end;
-  connect s sa;
+  connect s addr_info.ai_addr;
   s
 
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =

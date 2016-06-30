@@ -184,7 +184,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         ;
         test_speed ()
       ;
-    in let _run_child () =
+    in
+    let _run_child () =
       close read_fd;
       test_speed ();
       exit 0
@@ -208,8 +209,9 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
           ;
         end; ()
       in wait_until_child_writes ();
-      ignore(waitpid [] pid);
-      close read_fd
+      close read_fd ;
+      ignore @@ waitpid [] pid
+
     in begin match fork() with
     | 0   -> _run_child ()
     | pid -> _run_parent pid
@@ -233,7 +235,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   end
   end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
-and server_run ?(max_packet_size=0) fd =
+
+let server_run ?(max_packet_size=0) fd =
   try
     while true do
       print_debug_f (fun () -> "Wait for client request...");
@@ -299,4 +302,3 @@ and server_run ?(max_packet_size=0) fd =
     ignore(send_cmd fd Bye)
   end
   | Exit -> ()
-;;
