@@ -184,7 +184,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         ;
         test_speed ()
       ;
-    in 
+    in
     let _run_child () =
       close read_fd;
       test_speed ();
@@ -196,18 +196,19 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         latencies := latency :: !latencies;
         total_size := !total_size + s;
         total_time := !total_time +. t;
-      in 
-      let rec wait_until_child_writes () =
-        if in_time start_time max_time then begin
+      in let rec wait_until_child_writes () =
+        (* Always do a waitpid (nohang) at first *)
+        if (not (pidended pid)) && (in_time start_time max_time) then begin
           (* FIXME: timeout imprecisions *)
-          ignore (select [read_fd] [] [] (remaining_time max_time));
-          collect_data (Marshal.from_channel input);
-          if not (pidended pid) then
+          begin match (select [read_fd] [] [] (remaining_time max_time)) with
+           | [], [], [] -> () (* Nothing to read *)
+           | _ , _ , _  -> collect_data (Marshal.from_channel input)
+          end ;
+          if not (pidended pid) then (* This is a waitpid (nohang) *)
             wait_until_child_writes ()
           ;
         end; ()
-      in 
-      wait_until_child_writes ();
+      in wait_until_child_writes ();
       close read_fd ;
       ignore @@ waitpid [] pid
 
@@ -235,18 +236,18 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   end;
   (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
 
-
 let server_run ?(max_packet_size=0) fd =
   try
     while true do
-      print_message "Wait for client request...";
+      print_debug_f (fun () -> "Wait for client request...");
+      ignore (select [fd] [] [] (-1.)) ;
       match recv_cmd fd max_packet_size with
       | Send(s) -> begin
-        print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
+        print_debug_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
                         then Answer(Too_big)
                         else Answer(Ok)) in
-        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
+        print_debug_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         (* send acknowledgement then a Packet command *)
         if not (send_cmd fd my_answer) then
           raise (Cannot_send my_answer)
@@ -256,15 +257,16 @@ let server_run ?(max_packet_size=0) fd =
         ;
       end
       | Receive(s) -> begin
-        print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
+        print_debug_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
                         then Answer(Too_big)
                         else Answer(Ok)) in
-        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
+        print_debug_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         if not (send_cmd fd my_answer) then
           raise (Cannot_send my_answer)
         ;
         if my_answer = Answer(Ok) then
+          ignore (select [fd] [] [] (-1.)) ;
           match recv_cmd fd max_packet_size with
           | Packet(s') -> begin
             if s == s'
@@ -300,4 +302,3 @@ let server_run ?(max_packet_size=0) fd =
     ignore(send_cmd fd Bye)
   end
   | Exit -> ()
-

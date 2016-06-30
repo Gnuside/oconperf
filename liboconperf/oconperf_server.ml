@@ -7,7 +7,7 @@ open Core
  * Start server on given address/port
  *)
 let start ~max_pending_request addr port =
-  let addr_info = 
+  let addr_info =
     getaddrinfo addr (string_of_int port) [AI_SOCKTYPE SOCK_STREAM]
     |> function
         | x::tl -> x
@@ -17,11 +17,8 @@ let start ~max_pending_request addr port =
   bind s addr_info.ai_addr ;
   listen s max_pending_request ;
   s
-and close s =
+and stop s =
   Unix.close s
-and shutdown fd =
-  Unix.shutdown fd SHUTDOWN_ALL
-
 
 let string_of_sockaddr sa =
   match sa with
@@ -31,7 +28,7 @@ let string_of_sockaddr sa =
 
 let client_disconnection (fd, remote) =
   print_endline (sprintf "  Client %s leaving..." (string_of_sockaddr remote));
-  shutdown fd;
+  stop fd;
   ()
 
 
@@ -58,12 +55,12 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
     let (fd, remote) = accept s
     in
     match fork() with
-    | 0  -> 
+    | 0  ->
       begin
         if Unix.fork() <> 0 then exit 0;
         try
           client_connection (fd, remote) ~max_packet_size: max_packet_size; exit 0
-        with _ -> 
+        with _ ->
           begin
             client_disconnection (fd, remote);
             exit 1
@@ -71,6 +68,5 @@ let run ?(max_packet_size=0) ~max_pending_request addr port =
       end
     | id -> close fd; ignore(waitpid [] id)
   done;
-  close s;
+  stop s;
   0
-
