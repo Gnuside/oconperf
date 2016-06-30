@@ -236,14 +236,15 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
 and server_run ?(max_packet_size=0) fd =
   try
     while true do
-      print_message "Wait for client request...";
+      print_debug_f (fun () -> "Wait for client request...");
+      ignore (select [fd] [] [] (-1.)) ;
       match recv_cmd fd max_packet_size with
       | Send(s) -> begin
-        print_message_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
+        print_debug_f (fun () -> Printf.sprintf "I saw a client asked %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
                         then Answer(Too_big)
                         else Answer(Ok)) in
-        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
+        print_debug_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         (* send acknowledgement then a Packet command *)
         if not (send_cmd fd my_answer) then
           raise (Cannot_send my_answer)
@@ -253,15 +254,16 @@ and server_run ?(max_packet_size=0) fd =
         ;
       end
       | Receive(s) -> begin
-        print_message_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
+        print_debug_f (fun () -> Printf.sprintf "I saw a client will send %d bytes" s);
         let my_answer = (if max_packet_size <> 0 && s > max_packet_size
                         then Answer(Too_big)
                         else Answer(Ok)) in
-        print_message_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
+        print_debug_f (fun () -> Printf.sprintf "My answer: %s" (cmd_to_string my_answer));
         if not (send_cmd fd my_answer) then
           raise (Cannot_send my_answer)
         ;
         if my_answer = Answer(Ok) then
+          ignore (select [fd] [] [] (-1.)) ;
           match recv_cmd fd max_packet_size with
           | Packet(s') -> begin
             if s == s'
