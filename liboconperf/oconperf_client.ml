@@ -13,10 +13,10 @@ let connect_to ~iface ~max_time addr port =
   begin match iface with
   | `Any -> () (* Any is the default behavior of socket,
                   and bind_to_interface needs root perms *)
-  | _    -> Core.Std.Or_error.ok_exn Core.Linux_ext.bind_to_interface s iface
+  | _    -> Std.Or_error.ok_exn Linux_ext.bind_to_interface s iface
   end;
   (* Set timeout *)
-  if max_time <> 0.0 then begin
+  if max_time > 0.0 then begin
     setsockopt_float s SO_RCVTIMEO max_time;
     setsockopt_float s SO_SNDTIMEO max_time
   end;
