@@ -25,12 +25,17 @@ let connect_to ~iface ~max_time addr port =
 
 let speed_test ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   let s = connect_to addr port ~iface: iface ~max_time: max_time in
-  let ret = client_run s ~test_upload: test_upload
-                         ~max_time: max_time
-                         ~max_size: max_size
-                         ~max_packet_size: max_packet_size in
-  Unix.close s ;
-  ret
+  try begin
+    let ret = client_run s ~test_upload: test_upload
+                           ~max_time: max_time
+                           ~max_size: max_size
+                           ~max_packet_size: max_packet_size in
+    close s ;
+    ret
+  end with e -> begin
+    close s ;
+    raise e
+  end
 
 let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) ?(iface=`Any) addr port =
   try begin
