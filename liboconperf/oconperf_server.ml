@@ -13,10 +13,9 @@ let start ~max_pending_request addr port =
   listen s max_pending_request ;
   s
 and stop s =
-  Unix.close s
+  close s
 
-let string_of_sockaddr sa =
-  match sa with
+let string_of_sockaddr = function
   | ADDR_INET(a, p) -> sprintf "%s:%d" (string_of_inet_addr a) p
   | ADDR_UNIX(path) -> sprintf "Unix://%s" path
 
@@ -36,7 +35,7 @@ let client_connection ?(max_packet_size=0) (fd, remote) =
 
 let sigint_handle socket =
   print_endline "Closing server...";
-  close socket;
+  stop socket;
   exit 1
 
 
