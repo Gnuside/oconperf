@@ -4,7 +4,7 @@ open Oconperf_configuration
 type run_t = Client | Server
 
 let running = ref None
-and version = "1.0.2"
+and version = "1.0.3"
 and usage = sprintf "\
 %s [client|server]\
 " Sys.argv.(0)
