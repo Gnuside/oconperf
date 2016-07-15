@@ -201,6 +201,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         end
       in wait_until_child_writes () ;
       close read_fd ;
+      kill pid 15 ; (* SIGTERM *)
       ignore (waitpid [] pid)
 
     in begin match fork() with
