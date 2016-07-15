@@ -162,49 +162,47 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         in
         (* Send response to output *)
         Marshal.to_channel output (s, t, latency) [Marshal.No_sharing];
-        flush output;
+        flush output ;
         let now = gettimeofday () in
         (* Maximum total size limit *)
-        if max_size <> 0 && !total_size >= max_size then
-          exit 0
-        ;
+        if max_size <> 0 && !total_size >= max_size
+        then exit 0 ;
         (* Increase size value *)
-        if (now -. start_time) *. 2. < max_time then
-          size := !size * 2
-        ;
+        if (now -. start_time) *. 2. < max_time
+        then size := !size * 2 ;
         (* Maximum packet size limit *)
-        if max_packet_size <> 0 && !size > max_packet_size then
-          size := max_packet_size
-        ;
+        if max_packet_size <> 0 && !size > max_packet_size
+        then size := max_packet_size ;
         test_speed ()
       end
     in
     let _run_child () =
-      close read_fd;
-      test_speed ();
+      close read_fd ;
+      test_speed () ;
+      close write_fd ;
       exit 0
     and _run_parent pid =
-      close write_fd;
+      close write_fd ;
       let collect_data (s, t, latency) =
         (* Collect data *)
-        latencies := latency :: !latencies;
-        total_size := !total_size + s;
-        total_time := !total_time +. t;
+        latencies := latency :: !latencies ;
+        total_size := !total_size + s ;
+        total_time := !total_time +. t
       in let rec wait_until_child_writes () =
         (* Always do a waitpid (nohang) at first *)
         if (not (pidended pid)) && (in_time start_time max_time) then begin
           (* FIXME: timeout imprecisions *)
-          begin match (select [read_fd] [] [] (remaining_time max_time)) with
-           | [], [], [] -> () (* Nothing to read *)
-           | _ , _ , _  -> collect_data (Marshal.from_channel input)
-          end ;
-          if not (pidended pid) then (* This is a waitpid (nohang) *)
+          match (select [read_fd] [] [] (remaining_time max_time)) with
+          | [], [], [] -> () (* Nothing to read *)
+          | _ , _ , _  -> begin
+            collect_data (Marshal.from_channel input) ;
             wait_until_child_writes ()
-          ;
+          end
         end
-      in wait_until_child_writes ();
+      in wait_until_child_writes () ;
       close read_fd ;
-      ignore @@ waitpid [] pid
+      kill pid 15 ; (* SIGTERM *)
+      ignore (waitpid [] pid)
 
     in begin match fork() with
     | 0   -> _run_child ()
