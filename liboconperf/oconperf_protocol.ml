@@ -8,16 +8,16 @@ open Unix;;
 (* Client connects, then ask server to send (Send) to the client data
  * or to receive (Receive) data from the client *)
 
-Random.self_init ();
+Random.self_init ()
 
-exception Unexpected_answer of cmd_t;;
-exception Invalid_answer of string;;
-exception Unexpected_request of cmd_t;;
-exception Invalid_request of string;;
-exception Cannot_send of cmd_t;;
+exception Unexpected_answer of cmd_t
+exception Invalid_answer of string
+exception Unexpected_request of cmd_t
+exception Invalid_request of string
+exception Cannot_send of cmd_t
 
-let rbuf_size = ref (Oconperf_protocol_base.min_size * 2);;
-let rbuf = ref (Bytes.create !rbuf_size);;
+let rbuf_size = ref (Oconperf_protocol_base.min_size * 2)
+let rbuf = ref (Bytes.create !rbuf_size)
 
 (* Read and store data in rbuf, increase rbuf size if needed. *)
 let rec recv_data fd offset min_read =
@@ -210,8 +210,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
     end ;
     ignore @@ send_cmd fd Bye
   with
-  | Unix_error(e, _, _) -> begin
-    print_error (sprintf "Unix error (%s)" (error_message e))
+  | Unix_error(e, m, params) -> begin
+    print_error (sprintf "Unix error (%s) when calling %s with %s arguments" (error_message e) m params)
   end
   | Cannot_send(cmd) -> begin
     print_error (sprintf "Unable to send command to the server: %s" (cmd_to_string cmd))
@@ -277,8 +277,8 @@ let server_run ?(max_packet_size=0) fd =
   | Unix_error(EPIPE, _, _) -> begin
     print_error (sprintf "Write error (%s)" (error_message ECONNRESET))
   end
-  | Unix_error(e, _, _) -> begin
-    print_error (sprintf "Unix error (%s)" (error_message e))
+  | Unix_error(e, m, params) -> begin
+    print_error (sprintf "Unix error (%s) when calling %s with %s arguments" (error_message e) m params)
   end
   | Cannot_send(cmd) -> begin
     print_error (sprintf "Unable to send command to the client: %s" (cmd_to_string cmd))
