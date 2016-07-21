@@ -8,16 +8,16 @@ open Unix;;
 (* Client connects, then ask server to send (Send) to the client data
  * or to receive (Receive) data from the client *)
 
-Random.self_init ();
+Random.self_init ()
 
-exception Unexpected_answer of cmd_t;;
-exception Invalid_answer of string;;
-exception Unexpected_request of cmd_t;;
-exception Invalid_request of string;;
-exception Cannot_send of cmd_t;;
+exception Unexpected_answer of cmd_t
+exception Invalid_answer of string
+exception Unexpected_request of cmd_t
+exception Invalid_request of string
+exception Cannot_send of cmd_t
 
-let rbuf_size = ref (Oconperf_protocol_base.min_size * 2);;
-let rbuf = ref (Bytes.create !rbuf_size);;
+let rbuf_size = ref (Oconperf_protocol_base.min_size * 2)
+let rbuf = ref (Bytes.create !rbuf_size)
 
 (* Read and store data in rbuf, increase rbuf size if needed. *)
 let rec recv_data fd offset min_read =
