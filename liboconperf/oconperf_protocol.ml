@@ -210,8 +210,8 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
     end ;
     ignore @@ send_cmd fd Bye
   with
-  | Unix_error(e, _, _) -> begin
-    print_error (sprintf "Unix error (%s)" (error_message e))
+  | Unix_error(e, m, params) -> begin
+    print_error (sprintf "Unix error (%s) when calling %s with %s arguments" (error_message e) m params)
   end
   | Cannot_send(cmd) -> begin
     print_error (sprintf "Unable to send command to the server: %s" (cmd_to_string cmd))
@@ -277,8 +277,8 @@ let server_run ?(max_packet_size=0) fd =
   | Unix_error(EPIPE, _, _) -> begin
     print_error (sprintf "Write error (%s)" (error_message ECONNRESET))
   end
-  | Unix_error(e, _, _) -> begin
-    print_error (sprintf "Unix error (%s)" (error_message e))
+  | Unix_error(e, m, params) -> begin
+    print_error (sprintf "Unix error (%s) when calling %s with %s arguments" (error_message e) m params)
   end
   | Cannot_send(cmd) -> begin
     print_error (sprintf "Unable to send command to the client: %s" (cmd_to_string cmd))
