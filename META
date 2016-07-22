@@ -1,5 +1,5 @@
 name = "oconperf"
-version = "1.0.6"
+version = "1.0.7"
 description = "iperf OCaml"
 requires = "bytes core unix"
 archive(byte) = "liboconperf.cma"
