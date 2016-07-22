@@ -149,7 +149,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
   and total_size = ref 0
   and total_time = ref 0.0
   and latencies = ref [] in
-  print_message "Please wait...";
+  print_message_f (fun () -> "Please wait...") ;
   begin try
     let (read_fd, write_fd) = pipe () in
     let input = Unix.in_channel_of_descr read_fd
@@ -177,10 +177,33 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
       end
     in
     let _run_child () =
-      close read_fd ;
-      test_speed () ;
-      close write_fd ;
-      exit 0
+      try begin
+        close read_fd ;
+        test_speed () ;
+        close write_fd ;
+        ignore (send_cmd fd Bye) ;
+        exit 0
+      end with
+      | Unix_error(e, m, _) -> begin
+        print_error (sprintf "Unix error (%s) when calling %s in the child process" (error_message e) m) ;
+        exit 1
+      end
+      | Cannot_send(cmd) -> begin
+        print_error (sprintf "Unable to send command to the server: %s" (cmd_to_string cmd)) ;
+        exit 1
+      end
+      | Invalid_answer(s) -> begin
+        print_error (sprintf "Invalid answer from the server: %s" s) ;
+        exit 1
+      end
+      | Unexpected_answer(cmd) -> begin
+        print_error (sprintf "Unexpected answer from the server: %s" (cmd_to_string cmd)) ;
+        exit 1
+      end
+      | _ -> begin
+        print_error "Unexpected exception" ;
+        exit 1
+      end
     and _run_parent pid =
       close write_fd ;
       let collect_data (s, t, latency) =
@@ -192,41 +215,35 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         (* Always do a waitpid (nohang) at first *)
         if (not (pidended pid)) && (in_time start_time max_time) then begin
           (* FIXME: timeout imprecisions *)
-          match (select [read_fd] [] [] (remaining_time max_time)) with
-          | [], [], [] -> () (* Nothing to read *)
-          | _ , _ , _  -> begin
-            collect_data (Marshal.from_channel input) ;
-            wait_until_child_writes ()
+          try begin
+            match (select [read_fd] [] [] (remaining_time max_time)) with
+            | [], [], [] -> () (* Nothing to read *)
+            | _ , _ , _  -> begin
+              collect_data (Marshal.from_channel input) ;
+              wait_until_child_writes ()
+            end
+          end with Unix_error(e, m, _) -> begin
+            print_error (sprintf "Unix error (%s) when calling %s in parent" (error_message e) m) ;
+            wait_until_child_writes () (* Retry *)
           end
         end
       in wait_until_child_writes () ;
       close read_fd ;
-      kill pid 15 ; (* SIGTERM *)
+      try kill pid Sys.sigterm
+      with Unix_error(ESRCH, _, _) -> () (* No such process *)
+      ;
       ignore (waitpid [] pid)
 
-    in begin match fork() with
+    in match fork() with
     | 0   -> _run_child ()
     | pid -> _run_parent pid
-    end ;
-    ignore @@ send_cmd fd Bye
+
   with
-  | Unix_error(e, m, params) -> begin
-    print_error (sprintf "Unix error (%s) when calling %s with %s arguments" (error_message e) m params)
-  end
-  | Cannot_send(cmd) -> begin
-    print_error (sprintf "Unable to send command to the server: %s" (cmd_to_string cmd))
-  end
-  | Invalid_answer(s) -> begin
-    print_error (sprintf "Invalid answer from the server: %s" s)
-  end
-  | Unexpected_answer(cmd) -> begin
-    print_error (sprintf "Unexpected answer from the server: %s" (cmd_to_string cmd))
-  end
-  | Exit -> begin
-    print_error "Exit..."
+  | Unix_error(e, m, _) -> begin
+    print_error (sprintf "Unix error (%s) when calling %s" (error_message e) m)
   end
   end ;
-  (Some((float_of_int !total_size) /. !total_time), average_l !latencies)
+  (Some ((float_of_int !total_size) /. !total_time), average_l !latencies)
 
 let server_run ?(max_packet_size=0) fd =
   try
