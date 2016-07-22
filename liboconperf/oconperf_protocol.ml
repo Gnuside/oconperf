@@ -205,6 +205,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         exit 1
       end
     and _run_parent pid =
+      print_message_f (fun () -> sprintf "Create new process with pid %d" pid) ;
       close_out output ;
       let collect_data (s, t, latency) =
         (* Collect data *)
