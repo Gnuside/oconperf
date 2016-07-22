@@ -66,7 +66,6 @@ let run ?(test_upload=false) ?(human_readable=false) ?(max_time=2.0) ?(max_size=
         then (sprintf "Speed: %s ; Latency: %f s" speed_with_unit_always latency)
         else (sprintf "%s\t%f" speed_with_unit latency)
       );
-      print_message "Client disconnected.";
       0
     end
     | _, _ -> print_error "Cannot compute speed and latency"; 1
