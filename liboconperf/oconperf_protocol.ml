@@ -178,9 +178,9 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
     in
     let _run_child () =
       try begin
-        close read_fd ;
+        close_in input ;
         test_speed () ;
-        close write_fd ;
+        close_out output ;
         ignore (send_cmd fd Bye) ;
         exit 0
       end with
@@ -205,7 +205,7 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
         exit 1
       end
     and _run_parent pid =
-      close write_fd ;
+      close_out output ;
       let collect_data (s, t, latency) =
         (* Collect data *)
         latencies := latency :: !latencies ;
@@ -222,13 +222,20 @@ let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_s
               collect_data (Marshal.from_channel input) ;
               wait_until_child_writes ()
             end
-          end with Unix_error(e, m, _) -> begin
-            print_error (sprintf "Unix error (%s) when calling %s in parent" (error_message e) m) ;
-            wait_until_child_writes () (* Retry *)
+          end with
+          | End_of_file -> ()
+          | Unix_error(e, m, _) -> begin
+            print_error (sprintf "Unix error (%s) when calling %s in wait_until_child_writes" (error_message e) m)
+          end
+          | Failure text -> begin
+            print_error (sprintf "Failure %s in wait_until_child_writes" text)
+          end
+          | _ -> begin
+            print_error (sprintf "Unknown exception in wait_until_child_writes")
           end
         end
       in wait_until_child_writes () ;
-      close read_fd ;
+      close_in input ;
       try kill pid Sys.sigterm
       with Unix_error(ESRCH, _, _) -> () (* No such process *)
       ;
