@@ -21,24 +21,29 @@ let rbuf = ref (Bytes.create !rbuf_size)
 
 (* Read and store data in rbuf, increase rbuf size if needed. *)
 let rec recv_data fd offset min_read =
+  let read_more r =
+    recv_data fd (offset + r) (min_read - r)
+  and retry () =
+    print_debug_f (fun () -> "recv_data: wait and try again...") ;
+    ignore (select [fd] [] [] (-1.)) ;
+    (* Try again *)
+    recv_data fd offset min_read
+  in
   let nbuf_size = offset + min_read in
   if nbuf_size > !rbuf_size then begin
     (* Allocate bigger buffer *)
-    rbuf := Bytes.extend !rbuf 0 (nbuf_size - !rbuf_size);
-    rbuf_size := nbuf_size;
-    print_debug_f (fun () -> (sprintf "reallocate buffer: %d" nbuf_size));
-  end ;
-  let r = read fd !rbuf offset min_read in
-  if r >= min_read then begin
-    r
-  end else if r > 0 then begin
-    (* Read more *)
-    r + (recv_data fd (offset + r) (min_read - r))
-  end else begin
-    print_debug_f (fun () -> "recv_data: wait and try again...");
-    ignore (select [fd] [] [] (-1.));
-    (* Try again *)
-    recv_data fd offset min_read
+    rbuf := Bytes.extend !rbuf 0 (nbuf_size - !rbuf_size) ;
+    rbuf_size := nbuf_size ;
+    print_debug_f (fun () -> (sprintf "reallocate buffer: %d" nbuf_size))
+  end ; begin
+  try
+    let r = read fd !rbuf offset min_read in
+    if r >= min_read
+    then r
+    else if r > 0
+    then r + (read_more r)
+    else retry ()
+  with Unix_error(EAGAIN, _, _) -> retry ()
   end
 
 let send_cmd fd cmd =
