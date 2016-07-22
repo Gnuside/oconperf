@@ -29,7 +29,7 @@ let connect_to ~iface ~max_time addr port =
       | _, [_], _ -> begin
         match getsockopt_error s with
         | Some e -> raise (Unix_error(e, m, a))
-        | None   -> connect_retry ()
+        | None   -> () (* Connected *)
       end
       | _ -> connect_retry ()
     end
