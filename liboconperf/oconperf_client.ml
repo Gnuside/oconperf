@@ -21,7 +21,7 @@ let connect_to ~iface ~max_time addr port =
     setsockopt_float s SO_RCVTIMEO max_time ;
     setsockopt_float s SO_SNDTIMEO max_time
   end ;
-  let rec connect_retry () =
+  let connect_retry () =
     try connect s addr_info.ai_addr
     with Unix_error (EINPROGRESS, m, a) -> begin
       print_error "Wait to connect..." ;
@@ -31,7 +31,7 @@ let connect_to ~iface ~max_time addr port =
         | Some e -> raise (Unix_error(e, m, a))
         | None   -> () (* Connected *)
       end
-      | _ -> connect_retry ()
+      | _ -> raise (Unix_error(EINPROGRESS, m, a)) (* Timeout *)
     end
   in
   connect_retry () ;
