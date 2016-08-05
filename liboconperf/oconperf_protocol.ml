@@ -55,12 +55,13 @@ let send_cmd fd cmd =
   (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
 and recv_cmd fd max_packet_size =
   let max_read = if max_packet_size <> 0
-                 then Oconperf_protocol_base.min_size + max_packet_size
+                 (* Set with a minimum to 1 MB *)
+                 then max (1024 * 1024) (Oconperf_protocol_base.min_size + max_packet_size)
                  else 0
   in
   let recv_body offset (cmd_num, data_len) =
     if max_read <> 0 && data_len > max_read then begin
-      print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B" data_len));
+      print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B (> to %d B)" data_len max_read));
       Answer(Too_big)
     end else begin
       let r = recv_data fd offset data_len in
