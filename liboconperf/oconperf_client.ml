@@ -35,7 +35,9 @@ let connect_to ~iface ~max_time addr port =
         | _ -> raise (Unix_error(EINPROGRESS, m, a)) (* Timeout *)
       end
     | exn -> begin
-        Unix.close s ; raise exn
+        Unix.close s ; 
+        print_error "Unexpected failure (vautrage)..." ;
+        raise exn
       end
   in
   connect_retry () ;
