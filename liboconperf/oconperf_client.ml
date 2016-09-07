@@ -22,17 +22,21 @@ let connect_to ~iface ~max_time addr port =
     setsockopt_float s SO_SNDTIMEO max_time
   end ;
   let connect_retry () =
-    try connect s addr_info.ai_addr
-    with Unix_error (EINPROGRESS, m, a) -> begin
-      print_error "Wait to connect..." ;
-      match select [] [s] [] max_time with
-      | _, [_], _ -> begin
-        match getsockopt_error s with
-        | Some e -> raise (Unix_error(e, m, a))
-        | None   -> () (* Connected *)
+    try connect s addr_info.ai_addr with 
+    | Unix_error (EINPROGRESS, m, a) -> begin
+        Unix.close s ; 
+        print_error "Wait to connect..." ;
+        match select [] [s] [] max_time with
+        | _, [_], _ -> begin
+          match getsockopt_error s with
+          | Some e -> raise (Unix_error(e, m, a))
+          | None   -> () (* Connected *)
+        end
+        | _ -> raise (Unix_error(EINPROGRESS, m, a)) (* Timeout *)
       end
-      | _ -> raise (Unix_error(EINPROGRESS, m, a)) (* Timeout *)
-    end
+    | exn -> begin
+        Unix.close s ; raise exn
+      end
   in
   connect_retry () ;
   s
