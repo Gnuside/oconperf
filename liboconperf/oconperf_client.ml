@@ -28,10 +28,10 @@ let connect_to ~iface ~max_time addr port =
         match select [] [s] [] max_time with
         | _, [_], _ -> begin
           match getsockopt_error s with
-          | Some e -> ((* Unix.close s ; *) raise (Unix_error(e, m, a)))
+          | Some e -> ( Unix.close s ; raise (Unix_error(e, m, a)))
           | None   -> () (* Connected *)
         end
-        | _ -> ((*Unix.close s ; *) raise (Unix_error(EINPROGRESS, m, a))) (* Timeout *)
+        | _ -> (Unix.close s ; raise (Unix_error(EINPROGRESS, m, a))) (* Timeout *)
       end
       (*
     | exn -> begin
