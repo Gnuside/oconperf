@@ -31,11 +31,20 @@ let connect_to ~iface ~max_time addr port =
           match getsockopt_error s with
           | Some e -> ( 
               print_endline "oconperf: select error..." ;
-              Unix.close s ; raise (Unix_error(e, m, a))
+              Unix.close s ; 
+              raise (Unix_error(e, m, a))
             )
-          | None   -> () (* Connected *)
+          | None   -> (* Connected *)
+            (
+              print_endline "oconperf: connected..."
+            ) 
         end
-        | _ -> (Unix.close s ; raise (Unix_error(EINPROGRESS, m, a))) (* Timeout *)
+        | _ -> (* Timeout *)
+          (
+            print_endline "oconperf: timeout..."
+            Unix.close s ; 
+            raise (Unix_error(EINPROGRESS, m, a))
+          ) 
       end
       (*
     | exn -> begin
