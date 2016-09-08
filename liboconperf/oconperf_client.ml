@@ -42,7 +42,7 @@ let connect_to ~iface ~max_time addr port =
         | _ -> (* Timeout *)
           (
             print_endline "oconperf(54): timeout..." ;
-            Unix.close s ; 
+            (* Unix.close s ; *)
             raise (Unix_error(EINPROGRESS, m, a))
           ) 
       end
