@@ -25,10 +25,14 @@ let connect_to ~iface ~max_time addr port =
     try connect s addr_info.ai_addr with 
     | Unix_error (EINPROGRESS, m, a) -> begin
         print_error "Wait to connect..." ;
+        print_endline "oconperf: connect error: wait to connect..." ;
         match select [] [s] [] max_time with
         | _, [_], _ -> begin
           match getsockopt_error s with
-          | Some e -> ( Unix.close s ; raise (Unix_error(e, m, a)))
+          | Some e -> ( 
+              print_endline "oconperf: select error..." ;
+              Unix.close s ; raise (Unix_error(e, m, a))
+            )
           | None   -> () (* Connected *)
         end
         | _ -> (Unix.close s ; raise (Unix_error(EINPROGRESS, m, a))) (* Timeout *)
