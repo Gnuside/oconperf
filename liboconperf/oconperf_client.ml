@@ -27,32 +27,24 @@ let connect_to ~iface ~max_time addr port =
         print_error "Wait to connect..." ;
         print_endline "oconperf(54): connect error: wait to connect..." ;
         match select [] [s] [] max_time with
-        | _, [_], _ -> begin
-          match getsockopt_error s with
-          | Some e -> ( 
-              print_endline "oconperf(54): select error..." ;
-              Unix.close s ; 
-              raise (Unix_error(e, m, a))
-            )
-          | None   -> (* Connected *)
-            (
-              print_endline "oconperf(54): connected..."
-            ) 
-        end
+        | _, [_], _ -> 
+          begin
+            match getsockopt_error s with
+            | Some e -> ( 
+                print_endline "oconperf(54): select error..." ;
+                raise (Unix_error(e, m, a))
+              )
+            | None   -> (* Connected *)
+              (
+                print_endline "oconperf(54): connected..."
+              ) 
+          end
         | _ -> (* Timeout *)
           (
             print_endline "oconperf(54): timeout..." ;
-            (* Unix.close s ; *)
             raise (Unix_error(EINPROGRESS, m, a))
           ) 
       end
-      (*
-    | exn -> begin
-        Unix.close s ; 
-        print_error "Unexpected failure (vautrage)..." ;
-        raise exn
-      end
-         *)
   in
   connect_retry () ;
   s
