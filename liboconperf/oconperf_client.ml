@@ -24,8 +24,7 @@ let connect_to ~iface ~max_time addr port =
   let connect_retry () =
     try connect s addr_info.ai_addr with 
     | Unix_error (EINPROGRESS, m, a) -> begin
-        print_error "Wait to connect..." ;
-        print_endline "oconperf(54): connect error: wait to connect..." ;
+        print_endline "oconperf(54): wait to connect..." ;
         match select [] [s] [] max_time with
         | _, [_], _ -> 
           begin
@@ -39,7 +38,17 @@ let connect_to ~iface ~max_time addr port =
                 print_endline "oconperf(54): connected..."
               ) 
           end
-        | _ -> (* Timeout *)
+        | [_], _, _ -> (* Becomes readable ? *)
+          (
+            print_endline "oconperf(54): readable..." ;
+            raise (Unix_error(EINPROGRESS, m, a))
+          ) 
+        | _, _, [_] -> (* Exceptional condition ? *)
+          (
+            print_endline "oconperf(54): exceptional condition..." ;
+            raise (Unix_error(EINPROGRESS, m, a))
+          ) 
+        | _ -> (* timeout *)
           (
             print_endline "oconperf(54): timeout..." ;
             raise (Unix_error(EINPROGRESS, m, a))
