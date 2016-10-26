@@ -54,12 +54,12 @@ let send_cmd fd cmd =
       true)));
   (write fd cmd_b 0 (Bytes.length cmd_b)) <> 0
 and recv_cmd fd max_packet_size =
-  let max_read = if max_packet_size <> 0
-                 (* Set with a minimum to 1 MB *)
-                 then max (1024 * 1024) (Oconperf_protocol_base.min_size + max_packet_size)
-                 else 0
-  in
   let recv_body offset (cmd_num, data_len) =
+    let max_read = if max_packet_size <> 0
+                   (* Set with a minimum to 1 MB *)
+                   then max_packet_size
+                   else 0
+    in
     if max_read <> 0 && data_len > max_read then begin
       print_debug_f (fun () -> (sprintf "Cowardly refuse packets with size like %d B (> to %d B)" data_len max_read));
       Answer(Too_big)
@@ -150,7 +150,7 @@ and remaining_time max_time =
   max_time -. (gettimeofday ())
 
 let client_run ?(test_upload=false) ?(max_time=2.0) ?(max_size=0) ?(max_packet_size=0) fd =
-  let size = ref 256
+  let size = ref (min 256 max_packet_size)
   and start_time = gettimeofday ()
   and total_size = ref 0
   and total_time = ref 0.0

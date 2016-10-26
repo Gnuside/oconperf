@@ -1,0 +1,15 @@
+[Unit]
+Description=Oconperf Service
+After=multi-user.target network.target auditd.service
+Before=base.target
+
+[Service]
+ExecStart=/usr/bin/oconperf server
+ExecReload=/bin/kill -9 $MAINPID
+KillMode=control-group
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+Alias=oconperf

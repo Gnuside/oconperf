@@ -22,24 +22,24 @@ let connect_to ~iface ~max_time addr port =
     setsockopt_float so SO_SNDTIMEO max_time
   end ;
   let connect_retry sock =
-    printf "oconperf(55): trying connect with timeout=%f\n%!" max_time ;
+    Printf.fprintf Pervasives.stderr "oconperf(55): trying connect with timeout=%f\n%!" max_time ;
     try connect sock addr_info.ai_addr with 
     | Unix_error (EINPROGRESS, m, a) -> begin
-        print_endline "oconperf(55): wait to connect..." ;
+        Printf.fprintf Pervasives.stderr "oconperf(55): wait to connect..." ;
         match select [] [sock] [] max_time with
         | _, [_], _ -> begin
             match getsockopt_error sock with
             | Some e -> ( 
-                print_endline "oconperf(55): select error..." ;
+                Printf.fprintf Pervasives.stderr "oconperf(55): select error..." ;
                 raise (Unix_error(e, m, a))
               )
             | None   -> (* Connected *)
               (
-                print_endline "oconperf(55): connected..."
+                Printf.fprintf Pervasives.stderr "oconperf(55): connected..."
               ) 
           end
         | _ -> begin (* timeout *)
-            print_endline "oconperf(55): timeout..." ;
+            Printf.fprintf Pervasives.stderr "oconperf(55): timeout..." ;
             raise (Unix_error(EINPROGRESS, m, a)) 
           end
       end
